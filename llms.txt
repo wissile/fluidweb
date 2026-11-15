@@ -1,0 +1,32 @@
+# Blockwork
+
+> Blockwork is a freelance studio for web design, web development, SEO, AEO, GEO and mobile app design and development. Every project is priced block by block and the full price list is public.
+
+## Services
+
+- Website design and development: from $1,450.
+- SEO, AEO and GEO optimization: priced per page or as one-time blocks, added to a website build.
+- Mobile app design and development for iOS and Android: from $3,800.
+
+## How pricing works
+
+- Every project is a foundation, plus a price per page or screen, plus optional blocks. Each block has a fixed listed price. There are 110 blocks.
+- Website: $1,200 foundation plus $250 per page (1 to 50 pages). The foundation includes: discovery call and project plan; responsive, mobile-first build; hosting setup and launch; two revision rounds; 30 days of post-launch support.
+- Mobile app: $3,500 foundation plus $300 per screen (1 to 60 screens). The foundation includes: discovery call and product plan; project setup and navigation shell; test builds on real devices; two revision rounds; 30 days of post-launch support.
+- A website with 5 pages and no extra blocks costs $2,450. An app with 8 screens and no extra blocks costs $5,900.
+- SEO, AEO & GEO: SEO optimization $50 per page, AEO / GEO optimization $50 per page, Local SEO $250, Keyword & content strategy $400, SEO-safe migration $300.
+- Templates: Personal site $2,850, Small business $7,730, SaaS startup $13,980, Mobile MVP $12,990, Enterprise platform $32,605.
+- Payment: a 50% deposit to start with the balance invoiced before launch, or the full amount up front.
+
+## Pages
+
+- [Builder](index.html): pick a website, a mobile app or both, add blocks and see the total.
+- [Pricing](pricing.html): the full price list, every block with its price and unit.
+- [Portfolio](portfolio.html): live projects with the blocks each one uses.
+
+## Portfolio
+
+- [Meetworkplace](https://meetworkplace.com/): An enterprise social network that matches colleagues by shared interests. A marketing site with a blog and sales contact, plus the employee app with AI matchmaking, push messages and surveys. The same blocks cost $27,790 in the builder today.
+- [Bio Nature Santé](https://bionaturesante.com/): A French-language shop for organic essential oils and skin care in Lomé. Product and wellness service pages, a cart with delivery zones, and orders that finish on WhatsApp. The same blocks cost $8,480 in the builder today.
+- [FiredBunny](https://firedbunny.com/): A free personal-finance school you learn by playing: 159 lessons with quizzes, 50 calculators and simulators, a market calendar and a dashboard saved on your device. The same blocks cost $15,460 in the builder today.
+- [Alta Perspective](https://altaperspective.com/): A Salt Lake City studio for luxury real estate photography, video, drone and 3D tours. Image-led service pages, pricing, case studies and a booking request form. The same blocks cost $6,150 in the builder today.

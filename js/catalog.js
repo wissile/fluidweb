@@ -1,0 +1,981 @@
+// Single source of truth for everything that can be bought.
+// The builder UI renders from it and the optional checkout server re-prices from it,
+// so a price changed here changes both. All prices are whole US dollars.
+//
+// flat: charged once. perUnit: charged for every page (website) or screen (app).
+// Section types: scope = steppers that share the page/screen budget, single = pick exactly one, multi = pick any.
+// stepper.max 'units' caps a quantity at the page/screen count.
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory()
+  else root.Catalog = factory()
+})(typeof self !== 'undefined' ? self : this, function () {
+const flat = (id, name, price, description, extras = {}) => ({ id, name, price, description, unit: 'flat', ...extras })
+const perUnit = (id, name, price, description, extras = {}) => ({ id, name, price, description, unit: 'perUnit', ...extras })
+
+const website = {
+  id: 'website',
+  name: 'Website',
+  tagline: 'From a one-page portfolio to an enterprise platform.',
+  baseName: 'Website foundation',
+  basePrice: 1200,
+  included: [
+    'Discovery call and project plan',
+    'Responsive, mobile-first build',
+    'Hosting setup and launch',
+    'Two revision rounds',
+    '30 days of post-launch support',
+  ],
+  unit: { singular: 'page', plural: 'pages', price: 250, min: 1, max: 50, default: 5 },
+  sections: [
+    {
+      id: 'w-scope',
+      title: 'Scope',
+      description:
+        'Set the size of the site, then tell us which pages need more than static content. Simple pages are included.',
+      type: 'scope',
+      options: [
+        flat(
+          'w-dynamic',
+          'Dynamic pages',
+          60,
+          'Data-driven pages such as blog posts, listings or search results, fed by a CMS or database.',
+          { stepper: { max: 'units', noun: 'page' } },
+        ),
+        flat(
+          'w-member',
+          'Members-only pages',
+          200,
+          'Gated pages behind a login, membership or paid subscription.',
+          { stepper: { max: 'units', noun: 'page' } },
+        ),
+      ],
+    },
+    {
+      id: 'w-design',
+      title: 'Design',
+      description: 'Choose how every page gets its look.',
+      type: 'single',
+      options: [
+        perUnit(
+          'w-design-ai',
+          'AI-designed, human-reviewed',
+          0,
+          'Layouts generated with AI, then refined and signed off by a designer.',
+        ),
+        perUnit(
+          'w-design-custom',
+          'Custom human design',
+          120,
+          'Every page designed from scratch in Figma around your brand.',
+          { popular: true },
+        ),
+        perUnit(
+          'w-design-premium',
+          'Premium design + motion',
+          220,
+          'Custom design plus scroll animation, micro-interactions and art direction.',
+        ),
+      ],
+    },
+    {
+      id: 'w-content',
+      title: 'Brand & content',
+      description: 'The identity, words and tools that fill your pages.',
+      type: 'multi',
+      options: [
+        flat(
+          'w-brand-kit',
+          'Brand identity kit',
+          600,
+          'Logo, color palette, typography and a one-page style guide.',
+        ),
+        flat(
+          'w-design-system',
+          'Design system',
+          900,
+          'A reusable component library and tokens so future pages stay consistent.',
+        ),
+        perUnit('w-copy', 'Copywriting', 80, 'Professional, on-brand copy written for every page.'),
+        flat(
+          'w-imagery',
+          'Imagery & illustration',
+          300,
+          'Curated photography plus a custom icon or illustration set.',
+        ),
+        flat('w-theme', 'Light & dark mode', 200, 'A second theme with a visitor-facing toggle.'),
+        flat(
+          'w-cms',
+          'Content management (CMS)',
+          600,
+          'Edit text, images and pages yourself, no developer needed.',
+          { popular: true },
+        ),
+        flat('w-blog', 'Blog or news section', 400, 'Categories, tags, author pages and RSS.'),
+        perUnit(
+          'w-migration',
+          'Content migration',
+          25,
+          'Existing content moved across and reformatted for the new site.',
+        ),
+      ],
+    },
+    {
+      id: 'w-search',
+      title: 'SEO, AEO & GEO',
+      description: 'Get found on search engines and cited by AI answer engines.',
+      type: 'multi',
+      options: [
+        perUnit(
+          'w-seo',
+          'SEO optimization',
+          50,
+          'Meta tags, structured data, sitemap, clean URLs and keyword-tuned headings.',
+          { popular: true },
+        ),
+        perUnit(
+          'w-aeo',
+          'AEO / GEO optimization',
+          50,
+          'Answer-first content, crawlable server-rendered HTML, structured data and clear entity signals so ChatGPT, Perplexity and AI overviews can read and cite you.',
+        ),
+        flat(
+          'w-local-seo',
+          'Local SEO',
+          250,
+          'Google Business Profile, local business schema and directory listings.',
+        ),
+        flat(
+          'w-keyword',
+          'Keyword & content strategy',
+          400,
+          'A research report with a prioritized content plan.',
+        ),
+        flat(
+          'w-redirects',
+          'SEO-safe migration',
+          300,
+          'A 301 redirect map so you keep existing rankings when replacing an old site.',
+        ),
+      ],
+    },
+    {
+      id: 'w-features',
+      title: 'Site features',
+      description: 'Interactive pieces that turn visitors into customers.',
+      type: 'multi',
+      options: [
+        flat(
+          'w-forms',
+          'Contact & lead forms',
+          150,
+          'Validated forms with spam protection and email routing.',
+          { popular: true },
+        ),
+        flat(
+          'w-newsletter',
+          'Newsletter signup',
+          150,
+          'Email capture connected to your email marketing tool.',
+        ),
+        flat(
+          'w-booking',
+          'Booking & scheduling',
+          300,
+          'Let visitors book appointments or calls straight from the site.',
+        ),
+        flat('w-site-search', 'Site search', 300, 'Fast, typo-tolerant search across your content.'),
+        flat(
+          'w-chat',
+          'AI chat assistant',
+          800,
+          'A chatbot trained on your content that answers visitor questions.',
+        ),
+        flat(
+          'w-integration',
+          'Third-party integrations',
+          350,
+          'CRM, ERP, marketing tools or any external API. Priced per integration.',
+          { stepper: { max: 10, noun: 'integration' } },
+        ),
+      ],
+    },
+    {
+      id: 'w-accounts',
+      title: 'Accounts & backend',
+      description: 'Logins, data and the tools to manage them.',
+      type: 'multi',
+      options: [
+        flat(
+          'w-auth',
+          'User authentication',
+          700,
+          'Sign up, login, password reset and social sign-in.',
+        ),
+        flat(
+          'w-roles',
+          'Roles & permissions',
+          500,
+          'Different access levels for admins, staff and customers.',
+        ),
+        flat(
+          'w-sso',
+          'Enterprise SSO',
+          1500,
+          'SAML / OIDC single sign-on with Okta, Microsoft Entra ID or Google Workspace.',
+        ),
+        flat('w-database', 'Database & API', 1000, 'Data model, secure API and server-side logic.'),
+        flat(
+          'w-user-dashboard',
+          'Customer account area',
+          900,
+          'A signed-in space for profiles, orders or saved items.',
+        ),
+        flat(
+          'w-admin',
+          'Admin dashboard',
+          1400,
+          'A back office to manage users, content and data.',
+        ),
+        flat(
+          'w-uploads',
+          'File uploads & storage',
+          300,
+          'Secure uploads for documents, images or media.',
+        ),
+        flat(
+          'w-email',
+          'Transactional email',
+          200,
+          'Branded receipts, notifications and account emails.',
+        ),
+      ],
+    },
+    {
+      id: 'w-commerce',
+      title: 'Commerce',
+      description: 'Take money online, once or on repeat.',
+      type: 'multi',
+      options: [
+        flat('w-payments', 'Online payments', 600, 'Secure one-time checkout powered by Stripe.'),
+        flat(
+          'w-subscriptions',
+          'Subscriptions & billing',
+          1000,
+          'Recurring plans, trials, invoices and a self-serve billing portal.',
+        ),
+        flat(
+          'w-store',
+          'Online store',
+          1800,
+          'Product catalog, cart, checkout, inventory and order emails.',
+        ),
+      ],
+    },
+    {
+      id: 'w-global',
+      title: 'Languages & accessibility',
+      description: 'Reach every visitor, in their language and on their terms.',
+      type: 'multi',
+      options: [
+        perUnit(
+          'w-language',
+          'Additional languages',
+          35,
+          'Translated, localized pages with a language switcher and hreflang tags. Priced per page, per language.',
+          { stepper: { max: 10, noun: 'language' } },
+        ),
+        flat(
+          'w-rtl',
+          'Right-to-left support',
+          300,
+          'Mirrored layouts for Arabic, Hebrew and other RTL languages.',
+        ),
+        perUnit(
+          'w-wcag',
+          'WCAG 2.2 AA accessibility',
+          50,
+          'Keyboard, screen reader and contrast compliance built into every page.',
+        ),
+        flat(
+          'w-a11y-audit',
+          'Accessibility audit & statement',
+          900,
+          'A documented audit plus a published accessibility statement.',
+        ),
+      ],
+    },
+    {
+      id: 'w-analytics',
+      title: 'Analytics & compliance',
+      description: 'Know what works, and stay on the right side of privacy law.',
+      type: 'multi',
+      options: [
+        flat(
+          'w-analytics-setup',
+          'Analytics',
+          200,
+          'Privacy-friendly traffic analytics with a dashboard you can read.',
+          { popular: true },
+        ),
+        flat(
+          'w-conversion',
+          'Conversion tracking',
+          300,
+          'Goals, funnels and event tracking for forms, clicks and purchases.',
+        ),
+        flat('w-ab', 'A/B testing', 450, 'Experiment tooling to test headlines, layouts and offers.'),
+        flat(
+          'w-consent',
+          'Cookie consent',
+          200,
+          'A GDPR / CCPA consent banner wired to your tracking scripts.',
+        ),
+        flat(
+          'w-legal',
+          'Legal pages',
+          150,
+          'Privacy policy, terms and cookie policy pages built from vetted templates.',
+        ),
+      ],
+    },
+    {
+      id: 'w-quality',
+      title: 'Performance & security',
+      description: 'Fast, hardened and watched around the clock.',
+      type: 'multi',
+      options: [
+        perUnit(
+          'w-performance',
+          'Performance tuning',
+          35,
+          'Core Web Vitals optimization: images, fonts, caching and code splitting.',
+        ),
+        flat(
+          'w-security',
+          'Security hardening',
+          400,
+          'Security headers, rate limiting, bot protection and a dependency audit.',
+        ),
+        flat(
+          'w-testing',
+          'Automated tests & CI/CD',
+          800,
+          'End-to-end tests and a pipeline that checks every change before it ships.',
+        ),
+        flat('w-monitoring', 'Monitoring & alerts', 200, 'Error tracking and uptime alerts.'),
+        flat(
+          'w-backups',
+          'Backups & recovery',
+          250,
+          'Scheduled backups with a tested restore procedure.',
+        ),
+        flat(
+          'w-staging',
+          'Staging environment',
+          200,
+          'A private copy of the site to preview changes safely.',
+        ),
+      ],
+    },
+    {
+      id: 'w-launch',
+      title: 'Launch & handover',
+      description: 'The last mile, from domain to done.',
+      type: 'multi',
+      options: [
+        flat(
+          'w-domain',
+          'Domain, DNS & email setup',
+          100,
+          'Domain connection, SSL and business email records.',
+        ),
+        flat(
+          'w-training',
+          'Training & handover',
+          200,
+          'A recorded walkthrough and written documentation for your team.',
+        ),
+        flat(
+          'w-revision',
+          'Extra revision rounds',
+          300,
+          'Two rounds are included. Add more if you expect lots of stakeholders.',
+          { stepper: { max: 5, noun: 'round' } },
+        ),
+        flat(
+          'w-rush',
+          'Rush delivery',
+          1000,
+          'Priority scheduling that cuts the timeline by roughly 30%.',
+        ),
+      ],
+    },
+    {
+      id: 'w-care',
+      title: 'Care plan',
+      description: 'Who looks after the site once it is live? Prepaid, no auto-renewal.',
+      type: 'single',
+      options: [
+        flat(
+          'w-care-none',
+          '30 days of support',
+          0,
+          'Bug fixes for 30 days after launch, included with every build.',
+        ),
+        flat(
+          'w-care-3',
+          '3-month care plan',
+          300,
+          'Updates, backups, monitoring and two hours of changes each month.',
+        ),
+        flat(
+          'w-care-12',
+          '12-month care plan',
+          1000,
+          'A full year of care at a lower monthly rate.',
+        ),
+      ],
+    },
+  ],
+}
+
+const app = {
+  id: 'app',
+  name: 'Mobile app',
+  tagline: 'Designed, built and shipped to the App Store and Google Play.',
+  baseName: 'App foundation',
+  basePrice: 3500,
+  included: [
+    'Discovery call and product plan',
+    'Project setup and navigation shell',
+    'Test builds on real devices',
+    'Two revision rounds',
+    '30 days of post-launch support',
+  ],
+  unit: { singular: 'screen', plural: 'screens', price: 300, min: 1, max: 60, default: 8 },
+  sections: [
+    {
+      id: 'a-scope',
+      title: 'Scope',
+      description:
+        'Set the number of screens, then flag the ones that carry heavy logic. Simple screens are included.',
+      type: 'scope',
+      options: [
+        flat(
+          'a-complex',
+          'Complex screens',
+          180,
+          'Feeds, maps, editors, dashboards and multi-step flows that need extra logic.',
+          { stepper: { max: 'units', noun: 'screen' } },
+        ),
+      ],
+    },
+    {
+      id: 'a-platform',
+      title: 'Platform',
+      description: 'Choose how the app is built for iOS and Android.',
+      type: 'single',
+      options: [
+        flat(
+          'a-platform-cross',
+          'iOS + Android, one codebase',
+          0,
+          'A cross-platform React Native build that ships to both stores.',
+          { popular: true },
+        ),
+        flat(
+          'a-platform-native',
+          'Fully native iOS + Android',
+          4500,
+          'Separate Swift and Kotlin apps for maximum platform fidelity.',
+        ),
+      ],
+    },
+    {
+      id: 'a-design',
+      title: 'Design',
+      description: 'Choose how every screen gets its look.',
+      type: 'single',
+      options: [
+        perUnit(
+          'a-design-ai',
+          'AI-designed, human-reviewed',
+          0,
+          'Screens generated with AI, then refined and signed off by a designer.',
+        ),
+        perUnit(
+          'a-design-custom',
+          'Custom human design',
+          120,
+          'Every screen designed from scratch in Figma around your brand.',
+          { popular: true },
+        ),
+        perUnit(
+          'a-design-premium',
+          'Premium design + motion',
+          220,
+          'Custom design with transitions, haptics and an interactive prototype.',
+        ),
+      ],
+    },
+    {
+      id: 'a-brand',
+      title: 'Brand & experience',
+      description: 'First impressions, from the home screen icon inward.',
+      type: 'multi',
+      options: [
+        flat('a-icon', 'App icon & splash screen', 200, 'A store-ready icon set and launch screen.'),
+        flat(
+          'a-brand-kit',
+          'Brand identity kit',
+          600,
+          'Logo, color palette, typography and a one-page style guide.',
+        ),
+        flat(
+          'a-onboarding',
+          'Onboarding flow',
+          400,
+          'A guided first-run experience that explains the app and asks for permissions.',
+        ),
+        flat('a-theme', 'Light & dark mode', 250, 'Themes that follow the device setting.'),
+        perUnit(
+          'a-tablet',
+          'Tablet layouts',
+          35,
+          'Screens adapted for iPad and Android tablets.',
+        ),
+        perUnit('a-copy', 'UX copywriting', 40, 'Clear, on-brand wording for every screen.'),
+      ],
+    },
+    {
+      id: 'a-accounts',
+      title: 'Accounts & backend',
+      description: 'Logins, data and everything behind the screen.',
+      type: 'multi',
+      options: [
+        flat(
+          'a-auth',
+          'User authentication',
+          800,
+          'Email, Apple and Google sign-in with password reset.',
+          { popular: true },
+        ),
+        flat('a-biometric', 'Biometric login', 300, 'Face ID and fingerprint unlock.'),
+        flat(
+          'a-backend',
+          'Backend API & database',
+          1800,
+          'Data model, secure API and server-side logic.',
+        ),
+        flat(
+          'a-admin',
+          'Admin web dashboard',
+          1800,
+          'A web back office to manage users, content and data.',
+        ),
+        flat(
+          'a-offline',
+          'Offline mode & sync',
+          1400,
+          'Keeps working without a connection and syncs when back online.',
+        ),
+        flat(
+          'a-uploads',
+          'Media uploads & storage',
+          350,
+          'Photo, video and document uploads.',
+        ),
+        flat(
+          'a-realtime',
+          'Realtime & chat',
+          1300,
+          'Live updates, presence and in-app messaging.',
+        ),
+        flat(
+          'a-integration',
+          'Third-party integrations',
+          450,
+          'CRM, ERP or any external API. Priced per integration.',
+          { stepper: { max: 10, noun: 'integration' } },
+        ),
+      ],
+    },
+    {
+      id: 'a-engagement',
+      title: 'Engagement',
+      description: 'Reasons to open the app again tomorrow.',
+      type: 'multi',
+      options: [
+        flat(
+          'a-push',
+          'Push notifications',
+          400,
+          'Targeted notifications with opt-in prompts and deep links.',
+          { popular: true },
+        ),
+        flat(
+          'a-deeplinks',
+          'Deep links',
+          300,
+          'Universal links that open the right screen from email, web or ads.',
+        ),
+        flat(
+          'a-messaging',
+          'Email & SMS notifications',
+          300,
+          'Receipts, reminders and alerts outside the app.',
+        ),
+        flat(
+          'a-share',
+          'Sharing & review prompts',
+          150,
+          'Native share sheets and well-timed store review requests.',
+        ),
+        flat(
+          'a-ai',
+          'AI features',
+          1100,
+          'A chat assistant, smart search or image understanding.',
+        ),
+      ],
+    },
+    {
+      id: 'a-device',
+      title: 'Device features',
+      description: 'Put the hardware in the phone to work.',
+      type: 'multi',
+      options: [
+        flat('a-camera', 'Camera & scanning', 350, 'Photo capture plus QR and barcode scanning.'),
+        flat(
+          'a-maps',
+          'Maps & location',
+          550,
+          'Interactive maps, geolocation and nearby search.',
+        ),
+        flat('a-media', 'Audio & video playback', 500, 'Streaming with background playback.'),
+        flat(
+          'a-hardware',
+          'Bluetooth & hardware',
+          1300,
+          'Pairing and data exchange with external devices.',
+        ),
+        flat(
+          'a-health',
+          'Health & wearables',
+          850,
+          'Apple Health, Health Connect and watch data.',
+        ),
+      ],
+    },
+    {
+      id: 'a-money',
+      title: 'Monetization',
+      description: 'How the app earns its keep.',
+      type: 'multi',
+      options: [
+        flat('a-iap', 'In-app purchases', 1000, 'One-time unlocks and consumables.'),
+        flat(
+          'a-subscriptions',
+          'Subscriptions',
+          1200,
+          'Auto-renewing plans with trials, restores and a paywall.',
+        ),
+        flat(
+          'a-payments',
+          'Payments',
+          850,
+          'Stripe, Apple Pay and Google Pay for physical goods and services.',
+        ),
+        flat('a-ads', 'Ads', 350, 'Banner, interstitial and rewarded ad placements.'),
+      ],
+    },
+    {
+      id: 'a-global',
+      title: 'Languages & accessibility',
+      description: 'Reach every user, in their language and on their terms.',
+      type: 'multi',
+      options: [
+        perUnit(
+          'a-language',
+          'Additional languages',
+          25,
+          'Translated, localized screens and store listings. Priced per screen, per language.',
+          { stepper: { max: 10, noun: 'language' } },
+        ),
+        flat(
+          'a-rtl',
+          'Right-to-left support',
+          300,
+          'Mirrored layouts for Arabic, Hebrew and other RTL languages.',
+        ),
+        perUnit(
+          'a-a11y',
+          'Accessibility',
+          35,
+          'VoiceOver, TalkBack, dynamic type and contrast on every screen.',
+        ),
+      ],
+    },
+    {
+      id: 'a-quality',
+      title: 'Analytics & quality',
+      description: 'Measure it, protect it, keep it stable.',
+      type: 'multi',
+      options: [
+        flat(
+          'a-analytics',
+          'Analytics & events',
+          250,
+          'Usage, retention and funnel tracking.',
+          { popular: true },
+        ),
+        flat('a-crash', 'Crash reporting', 200, 'Crash and error monitoring with alerts.'),
+        flat(
+          'a-testing',
+          'Automated tests & CI/CD',
+          1000,
+          'Automated tests and a pipeline that builds and ships every release.',
+        ),
+        flat(
+          'a-security',
+          'Security hardening',
+          550,
+          'Secure storage, certificate pinning and jailbreak detection.',
+        ),
+        flat(
+          'a-privacy',
+          'Privacy compliance',
+          350,
+          'App Tracking Transparency, data deletion and store privacy labels.',
+        ),
+      ],
+    },
+    {
+      id: 'a-launch',
+      title: 'Launch & handover',
+      description: 'Out of the build pipeline and onto home screens.',
+      type: 'multi',
+      options: [
+        flat(
+          'a-store',
+          'App Store & Google Play submission',
+          500,
+          'Listings, review and release handled for both stores.',
+          { popular: true },
+        ),
+        flat(
+          'a-aso',
+          'Store listing optimization',
+          400,
+          'Keywords, screenshots and copy tuned for store search (ASO).',
+        ),
+        flat(
+          'a-beta',
+          'Beta testing program',
+          200,
+          'TestFlight and Play testing tracks with a feedback loop.',
+        ),
+        flat(
+          'a-ota',
+          'Over-the-air updates',
+          200,
+          'Ship fixes without waiting on a store review.',
+        ),
+        flat(
+          'a-landing',
+          'Marketing landing page',
+          800,
+          'A one-page site with store badges and smart app banners.',
+        ),
+        flat(
+          'a-training',
+          'Training & handover',
+          200,
+          'A recorded walkthrough and written documentation for your team.',
+        ),
+        flat(
+          'a-revision',
+          'Extra revision rounds',
+          350,
+          'Two rounds are included. Add more if you expect lots of stakeholders.',
+          { stepper: { max: 5, noun: 'round' } },
+        ),
+        flat(
+          'a-rush',
+          'Rush delivery',
+          1800,
+          'Priority scheduling that cuts the timeline by roughly 30%.',
+        ),
+      ],
+    },
+    {
+      id: 'a-care',
+      title: 'Care plan',
+      description: 'Who looks after the app once it is live? Prepaid, no auto-renewal.',
+      type: 'single',
+      options: [
+        flat(
+          'a-care-none',
+          '30 days of support',
+          0,
+          'Bug fixes for 30 days after launch, included with every build.',
+        ),
+        flat(
+          'a-care-3',
+          '3-month care plan',
+          600,
+          'OS updates, dependency upgrades, monitoring and three hours of changes each month.',
+        ),
+        flat(
+          'a-care-12',
+          '12-month care plan',
+          2000,
+          'A full year of care at a lower monthly rate.',
+        ),
+      ],
+    },
+  ],
+}
+
+const CATALOG = { website, app }
+const PRODUCT_IDS = ['website', 'app']
+const RUSH_OPTION_IDS = ['w-rush', 'a-rush']
+
+// Templates offered above the builder. `picks` maps option id -> quantity.
+const PRESET_SEEDS = [
+  {
+    id: 'personal',
+    name: 'Personal site',
+    description: 'A portfolio, resume or passion project.',
+    products: {
+      website: {
+        units: 4,
+        picks: { 'w-seo': 1, 'w-forms': 1, 'w-analytics-setup': 1, 'w-domain': 1 },
+      },
+    },
+  },
+  {
+    id: 'business',
+    name: 'Small business',
+    description: 'Get found locally and turn visits into bookings.',
+    products: {
+      website: {
+        units: 8,
+        picks: {
+          'w-dynamic': 2,
+          'w-design-custom': 1,
+          'w-cms': 1,
+          'w-blog': 1,
+          'w-seo': 1,
+          'w-aeo': 1,
+          'w-local-seo': 1,
+          'w-forms': 1,
+          'w-booking': 1,
+          'w-analytics-setup': 1,
+          'w-consent': 1,
+          'w-legal': 1,
+          'w-domain': 1,
+          'w-care-3': 1,
+        },
+      },
+    },
+  },
+  {
+    id: 'saas',
+    name: 'SaaS startup',
+    description: 'Marketing site plus a signed-in product with billing.',
+    products: {
+      website: {
+        units: 10,
+        picks: {
+          'w-dynamic': 3,
+          'w-member': 3,
+          'w-design-custom': 1,
+          'w-design-system': 1,
+          'w-seo': 1,
+          'w-aeo': 1,
+          'w-forms': 1,
+          'w-auth': 1,
+          'w-database': 1,
+          'w-user-dashboard': 1,
+          'w-email': 1,
+          'w-subscriptions': 1,
+          'w-analytics-setup': 1,
+          'w-conversion': 1,
+          'w-consent': 1,
+          'w-legal': 1,
+          'w-security': 1,
+          'w-testing': 1,
+          'w-monitoring': 1,
+          'w-staging': 1,
+        },
+      },
+    },
+  },
+  {
+    id: 'mobile-mvp',
+    name: 'Mobile MVP',
+    description: 'A first release on both stores to test the idea.',
+    products: {
+      app: {
+        units: 10,
+        picks: {
+          'a-complex': 3,
+          'a-design-custom': 1,
+          'a-icon': 1,
+          'a-onboarding': 1,
+          'a-auth': 1,
+          'a-backend': 1,
+          'a-push': 1,
+          'a-analytics': 1,
+          'a-crash': 1,
+          'a-store': 1,
+          'a-beta': 1,
+        },
+      },
+    },
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise platform',
+    description: 'Multilingual, accessible, SSO-protected and audited.',
+    products: {
+      website: {
+        units: 25,
+        picks: {
+          'w-dynamic': 8,
+          'w-member': 5,
+          'w-design-premium': 1,
+          'w-design-system': 1,
+          'w-cms': 1,
+          'w-seo': 1,
+          'w-aeo': 1,
+          'w-keyword': 1,
+          'w-auth': 1,
+          'w-roles': 1,
+          'w-sso': 1,
+          'w-database': 1,
+          'w-admin': 1,
+          'w-language': 2,
+          'w-wcag': 1,
+          'w-a11y-audit': 1,
+          'w-analytics-setup': 1,
+          'w-conversion': 1,
+          'w-consent': 1,
+          'w-legal': 1,
+          'w-performance': 1,
+          'w-security': 1,
+          'w-testing': 1,
+          'w-monitoring': 1,
+          'w-backups': 1,
+          'w-staging': 1,
+          'w-training': 1,
+          'w-care-12': 1,
+        },
+      },
+    },
+  },
+]
+
+return { CATALOG, PRODUCT_IDS, RUSH_OPTION_IDS, PRESET_SEEDS }
+})
