@@ -1,6 +1,6 @@
-# Blockwork
+# Fluidweb
 
-The Blockwork site rebuilt in plain HTML, CSS and JavaScript. No framework and no build step.
+The Fluidweb site rebuilt in plain HTML, CSS and JavaScript. No framework and no build step.
 
 ## Run it
 

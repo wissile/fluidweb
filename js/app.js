@@ -1,4 +1,4 @@
-// Blockwork builder UI. State lives in one object; every change goes through dispatch() and then render().
+// Fluidweb builder UI. State lives in one object; every change goes through dispatch() and then render().
 (function () {
   const { CATALOG, PRODUCT_IDS } = window.Catalog
   const P = window.Pricing

@@ -1,8 +1,8 @@
 {
-  "name": "blockwork",
+  "name": "fluidweb",
   "private": true,
   "version": "1.0.0",
-  "description": "Blockwork: freelance web design, development, SEO and mobile apps, priced block by block.",
+  "description": "Fluidweb: freelance web design, development, SEO and mobile apps, priced block by block.",
   "scripts": {
     "build": "node tools/build-seo.js && node tools/build-dist.js",
     "seo": "node tools/build-seo.js",

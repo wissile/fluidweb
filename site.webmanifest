@@ -1,7 +1,7 @@
 {
-  "name": "Blockwork",
-  "short_name": "Blockwork",
-  "description": "Blockwork is a freelance studio for web design, web development, SEO, AEO, GEO and mobile app design and development. Every project is priced block by block and the full price list is public.",
+  "name": "Fluidweb",
+  "short_name": "Fluidweb",
+  "description": "Fluidweb is a freelance studio for web design, web development, SEO, AEO, GEO and mobile app design and development. Every project is priced block by block and the full price list is public.",
   "start_url": "index.html",
   "display": "browser",
   "background_color": "#000000",

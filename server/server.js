@@ -228,5 +228,5 @@ const server = http.createServer(async (req, res) => {
   }
 })
 
-if (require.main === module) server.listen(PORT, () => console.log(`Blockwork running at ${SITE_URL}`))
+if (require.main === module) server.listen(PORT, () => console.log(`Fluidweb running at ${SITE_URL}`))
 module.exports = { server, startCheckoutSession }

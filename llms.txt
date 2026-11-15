@@ -1,6 +1,6 @@
-# Blockwork
+# Fluidweb
 
-> Blockwork is a freelance studio for web design, web development, SEO, AEO, GEO and mobile app design and development. Every project is priced block by block and the full price list is public.
+> Fluidweb is a freelance studio for web design, web development, SEO, AEO, GEO and mobile app design and development. Every project is priced block by block and the full price list is public.
 
 ## Services
 
