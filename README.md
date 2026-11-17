@@ -107,18 +107,19 @@ The server re-prices every order from `js/catalog.js`, creates a Stripe Checkout
 
 Differences from the Next.js version: payment happens on Stripe's hosted page instead of an embedded form, and Vercel Analytics is not included.
 
-## Deploying (Cloudflare Pages)
+## Deploying (Cloudflare Workers)
 
-The repository is set up for Cloudflare Pages with Git integration: every push to `main` redeploys.
+The site runs as a Cloudflare Worker that serves static files, connected to this GitHub repository: every push to `main` builds and deploys.
 
-| Setting | Value |
+| Setting (Worker > Settings > Build) | Value |
 |---|---|
+| Git repository | `wissile/fluidweb`, branch `main` |
 | Build command | `npm run build` |
-| Build output directory | `dist` |
+| Deploy command | `npx wrangler deploy` |
 
-`npm run build` regenerates the SEO content and copies only the public files into `dist/`, so `server/`, `tools/`, this README and `site.config.json` are not published. `_headers` sets caching and basic security headers. Cloudflare Pages serves `404.html` for unknown paths.
+`npm run build` regenerates the SEO content and copies only the public files into `dist/`. `wrangler.jsonc` tells Cloudflare to publish `dist/` and to serve `404.html` for unknown paths; `_headers` sets caching and basic security headers.
 
-Pages hosts static files only, so the Stripe payment server in `server/` does not run there. Until it is hosted somewhere (or ported to a Cloudflare Worker), checkout stays in its "not connected" state.
+Static hosting does not run the Stripe payment server in `server/`. Until it is hosted somewhere (or ported into the Worker), checkout stays in its "not connected" state.
 
 ## Analytics
 
