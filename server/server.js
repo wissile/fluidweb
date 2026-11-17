@@ -3,7 +3,8 @@
 //   npm install stripe
 //   STRIPE_SECRET_KEY=sk_test_... node server/server.js
 //
-// Then set <meta name="checkout-endpoint" content="/api/checkout"> in index.html.
+// Then set "checkoutEndpoint": "/api/checkout" in site.config.json and run node tools/build-seo.js.
+// This server does not answer /api/contact (the contact form): that is the Cloudflare Worker in src/worker.js.
 // Prices never come from the browser: the total is rebuilt here from js/catalog.js.
 const http = require('node:http')
 const fs = require('node:fs')
@@ -171,7 +172,9 @@ const ROOT_TYPES = ['.html', '.png', '.svg', '.txt', '.xml', '.webmanifest']
 const NOT_FOUND_PAGE = path.join(ROOT, '404.html')
 
 function publicFile(pathname) {
-  const relative = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '')
+  let relative = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '')
+  // Pages also answer without the extension (/pricing for pricing.html), the way the production host serves them.
+  if (!relative.includes('/') && !path.extname(relative) && fs.existsSync(path.join(ROOT, `${relative}.html`))) relative = `${relative}.html`
   const segments = relative.split('/')
   if (segments.some((segment) => segment === '' || segment.startsWith('.'))) return null
   const file = path.resolve(ROOT, relative)

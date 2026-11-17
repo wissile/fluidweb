@@ -1,7 +1,7 @@
 {
   "name": "Fluidweb",
   "short_name": "Fluidweb",
-  "description": "Fluidweb is a freelance studio for web design, web development, SEO, AEO, GEO and mobile app design and development. Every project is priced block by block and the full price list is public.",
+  "description": "Fluidweb is the freelance studio of Wissile Sogoyou, a software engineer based in Salt Lake City, Utah. It designs and builds websites and mobile apps for individuals, small businesses and startups, with SEO, AEO and GEO built in. Every project is priced block by block and the full price list is public.",
   "start_url": "index.html",
   "display": "browser",
   "background_color": "#000000",

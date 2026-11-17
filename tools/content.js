@@ -22,14 +22,14 @@
 module.exports = {
   // One sentence used in structured data and llms.txt.
   about:
-    '{{siteName}} is a freelance studio for web design, web development, SEO, AEO, GEO and mobile app design and development. Every project is priced block by block and the full price list is public.',
+    '{{siteName}} is the freelance studio of Wissile Sogoyou, a software engineer based in Salt Lake City, Utah. It designs and builds websites and mobile apps for individuals, small businesses and startups, with SEO, AEO and GEO built in. Every project is priced block by block and the full price list is public.',
 
   // Titles aim for 50 to 60 characters, descriptions for 140 to 160. The build warns outside that range.
   pages: {
     home: {
-      title: 'Web design, SEO and mobile apps, priced by block | {{siteName}}',
+      title: 'Websites and mobile apps, priced block by block | {{siteName}}',
       description:
-        'Freelance web design, development, SEO, AEO, GEO and mobile apps. Websites from {{webFrom}}, apps from {{appFrom}}. Pick your blocks and see the total before you pay.',
+        'Websites and mobile apps for individuals, small businesses and startups. Websites from {{webFrom}}, apps from {{appFrom}}. Pick your blocks and see the total before you pay.',
     },
     pricing: {
       title: 'Website and mobile app pricing, block by block | {{siteName}}',
@@ -43,7 +43,7 @@ module.exports = {
     },
     notFound: {
       title: 'Page not found | {{siteName}}',
-      description: 'This page does not exist. Go back to the {{siteName}} builder, the price list or the portfolio.',
+      description: 'This page does not exist. Go back to the {{siteName}} builder, the price list, the work or the contact page.',
     },
   },
 
@@ -80,7 +80,7 @@ module.exports = {
     },
     {
       q: 'How long does it take to build a website or an app?',
-      a: 'The builder shows a delivery estimate that grows with the size of your build, starting at about {{minWeeks}} weeks. The Small business template ({{template:business}}) is estimated at about {{weeks:business}} weeks. We confirm a delivery date on the kickoff call, once we know your content and deadlines.',
+      a: 'The builder shows a delivery estimate that grows with the size of your build, starting at about {{minWeeks}} weeks. The Small business template ({{template:business}}) is estimated at about {{weeks:business}} weeks. The delivery date is confirmed on the kickoff call, once your content and deadlines are known.',
     },
     {
       q: 'Can I get my project delivered faster?',
@@ -101,6 +101,18 @@ module.exports = {
     {
       q: 'What happens if I need to add something after I pay?',
       a: 'Changes after you pay are priced with the same blocks and the same prices you see in the builder. Adding a page or a feature later costs exactly what the builder says.',
+    },
+    {
+      q: 'Who builds my project?',
+      a: 'Wissile Sogoyou, a software engineer with over 15 years of experience across enterprise software, small-business projects and personal projects. {{siteName}} is his freelance studio, based in Salt Lake City, Utah. The person who answers your message is the person who builds your project.',
+    },
+    {
+      q: 'Can I ask a question or talk to someone before I pay?',
+      a: 'Yes. Use the contact form to ask a question, ask for a quote or ask for a call. In the builder, "Ask about this build" sends your build along with your question. For large or enterprise projects a conversation first is the recommended route.',
+    },
+    {
+      q: 'Can I get my deposit back?',
+      a: 'The deposit is fully refundable until the kickoff call has taken place. After that, work already completed is not refundable and unused portions are refunded pro rata. Refund requests go through the contact form.',
     },
   ],
 }

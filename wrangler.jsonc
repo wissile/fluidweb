@@ -1,11 +1,21 @@
 {
-  // Cloudflare Workers static site. "name" must match the Worker's name in the Cloudflare dashboard.
+  // Cloudflare Worker: static files from dist/ plus a small script for the contact form.
+  // "name" must match the Worker's name in the Cloudflare dashboard.
   // Build command: npm run build    Deploy command: npx wrangler deploy
   "name": "fluidweb",
   "compatibility_date": "2026-11-01",
+  // Runs only for addresses that match no file in dist/: POST /api/contact, and unknown pages (404.html).
+  "main": "src/worker.js",
   "assets": {
-    // Only dist/ is published, so server/, tools/, README.md and site.config.json stay private.
+    // Only dist/ is published, so server/, src/, tools/, README.md and site.config.json stay private.
     "directory": "./dist",
+    "binding": "ASSETS",
     "not_found_handling": "404-page"
+  },
+  "vars": {
+    // Where contact form messages are delivered, and the sender Resend uses. This file is not published.
+    // The API key is a secret named RESEND_API_KEY, set in the Cloudflare dashboard (see README.md).
+    "CONTACT_TO": "dosfirm@gmail.com",
+    "CONTACT_FROM": "Fluidweb <onboarding@resend.dev>"
   }
 }

@@ -208,6 +208,7 @@
         <span class="bricks" aria-hidden="true">${project.layers.map((layer) => `<span style="${hueStyle(layer.hue)}"></span>`).join('')}</span>
         <span class="work-meta">${project.recipe.map((product) => product.size).join(' + ')} · ${project.blocks} blocks</span>
         <span class="work-open" id="work-open-${project.id}">Take it apart ${icon('arrow-right')}</span>
+        <a class="work-case" href="case-study-${project.id}.html">Read the case study ${icon('arrow-right')}</a>
       </div>
     </article>`
   }
@@ -409,6 +410,7 @@
         </div>
         <div class="detail-foot">
           <a class="btn btn-primary btn-xl" href="index.html#build-${project.id}">Open the full build in the builder ${icon('arrow-right')}</a>
+          <a class="text-link" href="case-study-${project.id}.html">Read the ${esc(project.name)} case study ${icon('arrow-right')}</a>
           <p class="fineprint">Prices are what these blocks cost in the builder today, not what the client paid.${project.note ? ` ${esc(project.note)}` : ''}</p>
         </div>
         </div>

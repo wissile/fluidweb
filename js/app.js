@@ -2,6 +2,8 @@
 (function () {
   const { CATALOG, PRODUCT_IDS } = window.Catalog
   const P = window.Pricing
+  const Share = window.Share
+  const { track, sendContact } = window.Site
   const { formatUSD, pluralize, DEPOSIT_PERCENT } = P
 
   const $ = (selector, root = document) => root.querySelector(selector)
@@ -50,7 +52,103 @@
   function dispatch(action) {
     config = reducer(config, action)
     quote = P.computeQuote(config)
+    saveBuild()
+    // A build link left in the address bar no longer matches the build once anything changes.
+    if (window.location.hash.startsWith(`#${Share.VERSION}-`)) {
+      try {
+        history.replaceState(null, '', '#builder')
+      } catch {}
+    }
     render()
+  }
+
+  // ---- The build is kept in this browser, and can be written into a link ----
+  // Both use the short code from js/share.js. Anything read back goes through the strict parser,
+  // so a damaged or hand-edited code is ignored instead of half-loaded.
+
+  const STORE_KEY = 'fluidweb.build.v1'
+
+  function readBuildCode(code) {
+    const raw = Share.decodeBuild(code)
+    if (!raw) return null
+    try {
+      const parsed = P.parseBuildConfig(raw)
+      // Same key order as the templates, so a restored template still lights up its button.
+      for (const productId of PRODUCT_IDS) parsed[productId] = P.normalizeProductConfig(CATALOG[productId], parsed[productId])
+      return parsed
+    } catch {
+      return null
+    }
+  }
+
+  function saveBuild() {
+    try {
+      const code = Share.encodeBuild(config)
+      if (code) window.localStorage.setItem(STORE_KEY, code)
+      else window.localStorage.removeItem(STORE_KEY)
+    } catch {}
+  }
+
+  function restoreBuild() {
+    let build = null
+    try {
+      build = readBuildCode(window.localStorage.getItem(STORE_KEY))
+    } catch {}
+    if (!build) return false
+    config = build
+    quote = P.computeQuote(config)
+    return true
+  }
+
+  function buildLink() {
+    const code = Share.encodeBuild(config)
+    return code ? `${window.location.href.split('#')[0].split('?')[0]}#${code}` : ''
+  }
+
+  // Older browsers and some embedded views have no clipboard API.
+  function legacyCopy(text) {
+    const field = document.createElement('textarea')
+    field.value = text
+    field.setAttribute('readonly', '')
+    field.style.cssText = 'position:fixed;top:0;left:0;opacity:0'
+    const host = document.querySelector('dialog[open]') || document.body
+    host.appendChild(field)
+    field.select()
+    let copied = false
+    try {
+      copied = document.execCommand('copy')
+    } catch {}
+    field.remove()
+    return copied
+  }
+
+  let copyTimer = 0
+
+  async function copyBuildLink() {
+    const link = buildLink()
+    if (!link) return
+    let copied = false
+    try {
+      await navigator.clipboard.writeText(link)
+      copied = true
+    } catch {
+      copied = legacyCopy(link)
+    }
+    // If the clipboard is blocked, the link goes into the address bar so it can be copied from there.
+    if (!copied) {
+      try {
+        history.replaceState(null, '', link)
+      } catch {}
+    }
+    if (copied) track('build_link_copied', { currency: 'USD', value: quote.total, blocks: quote.blocks })
+    const message = copied ? 'Link copied' : 'Link is in the address bar'
+    for (const label of $$('[data-copy-label]')) label.textContent = message
+    $('#build-status').textContent = copied ? 'A link to this build was copied.' : 'The link to this build is now in the address bar.'
+    clearTimeout(copyTimer)
+    copyTimer = setTimeout(() => {
+      for (const label of $$('[data-copy-label]')) label.textContent = COPY_LABEL
+      $('#build-status').textContent = ''
+    }, 2500)
   }
 
   const reset = () => dispatch({ type: 'replace', config: P.defaultBuildConfig() })
@@ -106,7 +204,8 @@
       }),
       { label: 'Priced blocks', value: String(blockCount) },
     ]
-    $('#hero-facts').innerHTML = facts.map((fact) => `<div><dt>${esc(fact.label)}</dt><dd>${esc(fact.value)}</dd></div>`).join('')
+    const target = $('#hero-facts')
+    if (target) target.innerHTML = facts.map((fact) => `<div><dt>${esc(fact.label)}</dt><dd>${esc(fact.value)}</dd></div>`).join('')
   }
 
   function buildPicker() {
@@ -300,6 +399,10 @@
   // ---- Summary (rendered into the sidebar and into the mobile sheet) ----
 
   let seenKeys = new Set()
+  const COPY_LABEL = 'Copy link to this build'
+  // Above this total, or on the Enterprise platform template, the summary suggests a conversation before paying.
+  const TALK_FIRST_ABOVE = 20000
+  const TALK_FIRST_TEMPLATE = 'enterprise'
 
   function summaryHTML(weeks, isNew) {
     const head = `<div class="summary-head"><h3>Your build</h3><span>${quote.blocks} ${quote.blocks === 1 ? 'block' : 'blocks'}</span></div>`
@@ -333,6 +436,10 @@
       .join('')
 
     const deposit = P.amountDueCents(quote.total, 'deposit') / 100
+    const large = quote.total > TALK_FIRST_ABOVE || PRESET_FINGERPRINTS.get(TALK_FIRST_TEMPLATE) === JSON.stringify(config)
+    const talkFirst = large
+      ? `<p class="summary-note">${icon('message-square')}<span>A build this size goes better with a conversation before any payment. <button type="button" class="link" data-action="talk">Talk to me first</button></span></p>`
+      : ''
     return `${head}
       <div class="stack" aria-hidden="true">${stack}</div>
       <div class="lines" role="region" aria-label="Selected blocks" tabindex="0">${groups}</div>
@@ -342,9 +449,14 @@
         <p class="deposit-row"><span>${DEPOSIT_PERCENT}% deposit to start</span><span>${formatUSD(deposit)}</span></p>
         <p class="eta">${icon('clock')}Estimated delivery in about ${weeks} weeks</p>
       </div>
+      ${talkFirst}
       <div class="summary-actions">
         <button type="button" class="btn btn-primary btn-xl btn-block" data-action="checkout">Continue to checkout ${icon('arrow-right')}</button>
-        <button type="button" class="btn btn-ghost btn-block" data-action="reset">${icon('rotate-ccw')}Start over</button>
+        <button type="button" class="btn btn-outline btn-lg btn-block" data-action="ask">${icon('message-square')}Ask about this build</button>
+        <div class="summary-minor">
+          <button type="button" class="btn btn-ghost" data-action="copy-link">${icon('link')}<span data-copy-label>${COPY_LABEL}</span></button>
+          <button type="button" class="btn btn-ghost" data-action="reset">${icon('rotate-ccw')}Start over</button>
+        </div>
       </div>`
   }
 
@@ -495,18 +607,21 @@
 
   const sheet = $('#sheet')
   const checkout = $('#checkout')
+  const ask = $('#ask')
 
   document.addEventListener('click', (event) => {
     const action = event.target.closest('[data-action]')?.dataset.action
     if (action === 'reset') reset()
     if (action === 'checkout') openCheckout()
+    if (action === 'ask' || action === 'talk') openAsk(action)
+    if (action === 'copy-link') copyBuildLink()
 
     const close = event.target.closest('[data-close]')
     if (close) close.closest('dialog').close()
   })
 
   // Clicking the dimmed backdrop closes a dialog.
-  for (const dialog of [sheet, checkout]) {
+  for (const dialog of [sheet, checkout, ask]) {
     dialog.addEventListener('click', (event) => {
       if (event.target === dialog) dialog.close()
     })
@@ -524,8 +639,8 @@
   const selectedPlan = () => (form.elements.plan.value === 'full' ? 'full' : 'deposit')
   const amountDue = (plan) => P.amountDueCents(quote.total, plan) / 100
 
-  function showStage(name) {
-    for (const stage of $$('[data-stage]', checkout)) stage.hidden = stage.dataset.stage !== name
+  function showStage(name, dialog = checkout) {
+    for (const stage of $$('[data-stage]', dialog)) stage.hidden = stage.dataset.stage !== name
   }
 
   function setError(title, text) {
@@ -543,17 +658,12 @@
   }
 
   function refreshCheckout() {
-    $('#checkout-desc').textContent = `Tell us who you are and how you would like to pay for your ${formatUSD(quote.total)} project.`
+    $('#checkout-desc').textContent = `Add your details and choose how to pay for your ${formatUSD(quote.total)} project.`
     for (const node of $$('[data-plan-amount]', checkout)) node.textContent = formatUSD(amountDue(node.dataset.planAmount))
     setPending(false)
   }
 
-  // Analytics events. With Google Analytics installed directly they go through gtag(); with Tag Manager
-  // they land in the data layer for a trigger to pick up. Without either, nothing is sent.
-  const track = (event, data) => {
-    if (typeof window.gtag === 'function') window.gtag('event', event, data)
-    else (window.dataLayer = window.dataLayer || []).push({ event, ...data })
-  }
+  // Analytics events go through track() from js/site.js. No personal data in the parameters.
   const orderSummary = () => ({
     currency: 'USD',
     value: quote.total,
@@ -566,19 +676,23 @@
     if (sheet.open) sheet.close()
     showStage('details')
     setError()
+    showOffer(false)
     refreshCheckout()
     checkout.showModal()
   }
 
-  form.addEventListener('change', (event) => {
-    if (event.target.name === 'plan') refreshCheckout()
-  })
+  // ---- Checkout without a payment service: the build can be sent as a request instead ----
 
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault()
-    setError()
+  const offer = $('#checkout-offer')
+  const offerButton = $('#checkout-request')
 
-    const order = {
+  function showOffer(show) {
+    offer.hidden = !show
+    $('#checkout-submit').hidden = show
+  }
+
+  function checkoutOrder() {
+    return {
       config,
       plan: selectedPlan(),
       contact: {
@@ -588,6 +702,106 @@
         notes: form.elements.notes.value,
       },
     }
+  }
+
+  offerButton.addEventListener('click', async () => {
+    setError()
+    const order = checkoutOrder()
+    let clean
+    try {
+      clean = P.parseCheckoutRequest({ ...order, attemptId: crypto.randomUUID() })
+    } catch (error) {
+      if (!(error instanceof P.ValidationError)) throw error
+      setError('Your request could not be sent', error.message)
+      return
+    }
+    const planLine = clean.plan === 'full' ? 'Preferred payment: in full.' : `Preferred payment: ${DEPOSIT_PERCENT}% deposit.`
+    offerButton.disabled = true
+    offerButton.textContent = 'Sending'
+    const result = await sendContact({
+      topic: 'quote',
+      name: clean.contact.name,
+      email: clean.contact.email,
+      company: clean.contact.company,
+      message: [clean.contact.notes, planLine].filter(Boolean).join('\n\n'),
+      build: Share.encodeBuild(clean.config),
+      website: form.elements.website.value,
+    })
+    offerButton.disabled = false
+    offerButton.textContent = 'Send this build as a request'
+    if (result.ok) {
+      track('quote_request', { ...orderSummary(), source: 'checkout' })
+      showStage('requested')
+      return
+    }
+    setError('Your request was not sent', result.error || 'Nothing was charged and nothing reached me. Please try again later.')
+  })
+
+  // ---- "Ask about this build" and "Talk to me first": a short message with the build attached ----
+
+  const askForm = $('#ask-form')
+  let askSource = 'ask'
+
+  function setAskError(text) {
+    $('#ask-error').hidden = !text
+    $('#ask-error-text').textContent = text || ''
+  }
+
+  function openAsk(source) {
+    askSource = source
+    if (sheet.open) sheet.close()
+    const talk = source === 'talk'
+    $('#ask-title').textContent = talk ? 'Talk to me first' : 'Ask about this build'
+    $('#ask-desc').textContent = talk
+      ? `Tell me about the project behind this ${formatUSD(quote.total)} build. I will reply by email, and we can set up a call from there.`
+      : `Your ${formatUSD(quote.total)} build is sent along with your message, and I will reply by email.`
+    showStage('form', ask)
+    setAskError()
+    ask.showModal()
+  }
+
+  askForm.addEventListener('submit', async (event) => {
+    event.preventDefault()
+    setAskError()
+    const name = askForm.elements.name.value.trim()
+    const email = askForm.elements.email.value.trim()
+    const message = askForm.elements.message.value.trim()
+    if (!name || !email || !message) return setAskError('Fill in your name, your email and a message.')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setAskError('Enter a valid email address.')
+    const build = Share.encodeBuild(config)
+    if (!build) return setAskError('Add a website or a mobile app to the build first.')
+
+    const button = $('#ask-submit')
+    button.disabled = true
+    $('#ask-submit-text').textContent = 'Sending'
+    const result = await sendContact({
+      topic: askSource === 'talk' ? 'call' : 'quote',
+      name,
+      email,
+      message,
+      build,
+      website: askForm.elements.website.value,
+    })
+    button.disabled = false
+    $('#ask-submit-text').textContent = 'Send message'
+    if (result.ok) {
+      track('quote_request', { ...orderSummary(), source: askSource })
+      askForm.elements.message.value = ''
+      showStage('sent', ask)
+      return
+    }
+    setAskError(result.error || 'Your message was not sent. Please try again later.')
+  })
+
+  form.addEventListener('change', (event) => {
+    if (event.target.name === 'plan') refreshCheckout()
+  })
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault()
+    setError()
+
+    const order = checkoutOrder()
     const fingerprint = JSON.stringify(order)
     if (attempt?.fingerprint !== fingerprint) attempt = { fingerprint, id: crypto.randomUUID() }
     const request = { ...order, attemptId: attempt.id }
@@ -600,11 +814,10 @@
       return
     }
 
+    // No payment service is connected: offer to send the build as a request instead of a dead end.
     if (!endpoint) {
-      setError(
-        'Online payment is not connected yet',
-        'Nothing was charged and your details were not sent. The site owner needs to connect a payment server (see README.md).',
-      )
+      showOffer(true)
+      offerButton.focus()
       return
     }
 
@@ -623,7 +836,7 @@
       }
       setError('Checkout could not start', result.error || 'Please try again in a moment.')
     } catch {
-      setError('Checkout could not start', 'We could not reach the payment service. Check your connection and try again.')
+      setError('Checkout could not start', 'The payment service could not be reached. Check your connection and try again.')
     }
     setPending(false)
   })
@@ -644,13 +857,18 @@
     } catch {}
   }
 
-  // A portfolio project links here as index.html#build-<project id>, and the pricing page links a
-  // template as index.html#template-<template id>: load those blocks into the builder.
+  // A portfolio project links here as index.html#build-<project id>, the pricing page links a
+  // template as index.html#template-<template id>, and "Copy link to this build" makes
+  // #b1-<code> (see js/share.js): load those blocks into the builder.
   function loadBuildFromHash() {
-    const match = /^#(build|template)-([a-z0-9-]+)$/.exec(window.location.hash)
-    if (!match) return false
+    const hash = window.location.hash
+    const match = /^#(build|template)-([a-z0-9-]+)$/.exec(hash)
+    const shared = match ? null : readBuildCode(hash.slice(1))
+    if (!match && !shared) return false
     let build
-    if (match[1] === 'template') {
+    if (shared) {
+      build = shared
+    } else if (match[1] === 'template') {
       build = P.PRESETS.find((entry) => entry.id === match[2])?.config
     } else {
       const project = (window.Portfolio?.projects ?? []).find((entry) => entry.id === match[2])
@@ -659,6 +877,12 @@
     if (!build) return false
     config = build
     quote = P.computeQuote(config)
+    saveBuild()
+    // The build now lives in local storage, so the address can point at the builder. A reload then
+    // keeps any changes made since instead of loading the link's build again.
+    try {
+      history.replaceState(null, '', '#builder')
+    } catch {}
     requestAnimationFrame(() => $('#builder').scrollIntoView())
     return true
   }
@@ -670,7 +894,7 @@
   buildHero()
   buildPicker()
   buildPresets()
-  loadBuildFromHash()
+  if (!loadBuildFromHash()) restoreBuild()
   render()
   showPaidIfReturning()
   window.addEventListener('hashchange', () => {

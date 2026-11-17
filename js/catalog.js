@@ -31,7 +31,7 @@ const website = {
       id: 'w-scope',
       title: 'Scope',
       description:
-        'Set the size of the site, then tell us which pages need more than static content. Simple pages are included.',
+        'Set the size of the site, then mark the pages that need more than static content. Simple pages are included.',
       type: 'scope',
       options: [
         flat(

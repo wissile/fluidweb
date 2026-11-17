@@ -3,5 +3,6 @@
   "siteName": "Fluidweb",
   "locale": "en_US",
   "googleTagManagerId": "",
-  "googleAnalyticsId": "G-Y7D2Q3Z90V"
+  "googleAnalyticsId": "G-Y7D2Q3Z90V",
+  "checkoutEndpoint": ""
 }
