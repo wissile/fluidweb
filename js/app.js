@@ -548,7 +548,19 @@
     setPending(false)
   }
 
+  // Events for Google Tag Manager (does nothing unless a container is loaded and listens for them).
+  const track = (event, data) => {
+    ;(window.dataLayer = window.dataLayer || []).push({ event, ...data })
+  }
+  const orderSummary = () => ({
+    currency: 'USD',
+    value: quote.total,
+    products: quote.products.map((product) => product.name).join(' + '),
+    blocks: quote.blocks,
+  })
+
   function openCheckout() {
+    track('begin_checkout', orderSummary())
     if (sheet.open) sheet.close()
     showStage('details')
     setError()
@@ -603,6 +615,7 @@
       })
       const result = await response.json()
       if (result.ok && result.url) {
+        track('checkout_redirect', { ...orderSummary(), plan: order.plan, due: amountDue(order.plan) })
         window.location.assign(result.url)
         return
       }

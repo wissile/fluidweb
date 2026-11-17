@@ -447,6 +447,15 @@ function headHTML(page) {
   )
   if (SITE_URL) lines.push(`<meta name="twitter:image" content="${esc(`${SITE_URL}/${SHARE_IMAGE.file}`)}">`)
   lines.push(`<script type="application/ld+json">${JSON.stringify(graphFor(page)).replace(/</g, '\\u003c')}</script>`)
+  // Google Tag Manager, when site.config.json has googleTagManagerId. It loads only over http(s), so opening
+  // the files from disk never sends hits. Analytics tags themselves are configured inside the GTM container.
+  const gtmId = String(config.googleTagManagerId || '').trim()
+  if (gtmId) {
+    if (!/^GTM-[A-Z0-9]+$/.test(gtmId)) throw new Error(`site.config.json: googleTagManagerId "${gtmId}" does not look like GTM-XXXXXXX`)
+    lines.push(
+      `<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}if(location.protocol.indexOf('http')===0){dataLayer.push({'gtm.start':new Date().getTime(),event:'gtm.js'});var g=document.createElement('script');g.async=true;g.src='https://www.googletagmanager.com/gtm.js?id=${gtmId}';document.head.appendChild(g)}</script>`,
+    )
+  }
   return lines.join('\n')
 }
 

@@ -119,3 +119,9 @@ The repository is set up for Cloudflare Pages with Git integration: every push t
 `npm run build` regenerates the SEO content and copies only the public files into `dist/`, so `server/`, `tools/`, this README and `site.config.json` are not published. `_headers` sets caching and basic security headers. Cloudflare Pages serves `404.html` for unknown paths.
 
 Pages hosts static files only, so the Stripe payment server in `server/` does not run there. Until it is hosted somewhere (or ported to a Cloudflare Worker), checkout stays in its "not connected" state.
+
+## Analytics (Google Tag Manager)
+
+`site.config.json` has `googleTagManagerId`. `node tools/build-seo.js` writes the Tag Manager loader into the head of every page; remove the id and rebuild to take it out. The loader runs only over http(s). What gets measured is decided inside the GTM container: add a Google Analytics 4 tag there (with your `G-` measurement ID) and publish the container.
+
+The builder also pushes two events to the data layer that a GTM trigger can pick up: `begin_checkout` (when the checkout dialog opens, with `value`, `currency`, `products`, `blocks`) and `checkout_redirect` (just before the customer is sent to the payment page).
