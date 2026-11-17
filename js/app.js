@@ -548,9 +548,11 @@
     setPending(false)
   }
 
-  // Events for Google Tag Manager (does nothing unless a container is loaded and listens for them).
+  // Analytics events. With Google Analytics installed directly they go through gtag(); with Tag Manager
+  // they land in the data layer for a trigger to pick up. Without either, nothing is sent.
   const track = (event, data) => {
-    ;(window.dataLayer = window.dataLayer || []).push({ event, ...data })
+    if (typeof window.gtag === 'function') window.gtag('event', event, data)
+    else (window.dataLayer = window.dataLayer || []).push({ event, ...data })
   }
   const orderSummary = () => ({
     currency: 'USD',

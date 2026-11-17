@@ -456,6 +456,16 @@ function headHTML(page) {
       `<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}if(location.protocol.indexOf('http')===0){dataLayer.push({'gtm.start':new Date().getTime(),event:'gtm.js'});var g=document.createElement('script');g.async=true;g.src='https://www.googletagmanager.com/gtm.js?id=${gtmId}';document.head.appendChild(g)}</script>`,
     )
   }
+  // Google Analytics 4 installed directly, when site.config.json has googleAnalyticsId. Use this or
+  // googleTagManagerId, not both, or page views are counted twice. Loads only over http(s).
+  const gaId = String(config.googleAnalyticsId || '').trim()
+  if (gaId) {
+    if (!/^G-[A-Z0-9]+$/.test(gaId)) throw new Error(`site.config.json: googleAnalyticsId "${gaId}" does not look like G-XXXXXXXXXX`)
+    if (gtmId) throw new Error('site.config.json: set googleAnalyticsId or googleTagManagerId, not both')
+    lines.push(
+      `<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}if(location.protocol.indexOf('http')===0){gtag('js',new Date());gtag('config','${gaId}');var g=document.createElement('script');g.async=true;g.src='https://www.googletagmanager.com/gtag/js?id=${gaId}';document.head.appendChild(g)}</script>`,
+    )
+  }
   return lines.join('\n')
 }
 
