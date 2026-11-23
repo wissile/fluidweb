@@ -228,8 +228,16 @@ async function handleContact(request, env, url) {
       body: JSON.stringify(emailFor(contact, env)),
     })
     delivered = response.ok
-    // Only the status is logged, never the message.
-    if (!delivered) console.error(`Contact email was refused by the mail service (status ${response.status})`)
+    // Log the mail service's own reason (for example a sender or recipient it does not allow).
+    // The visitor's message is never logged.
+    if (!delivered) {
+      let reason = ''
+      try {
+        const detail = await response.json()
+        reason = [detail.name, detail.message].filter((part) => typeof part === 'string').join(': ').slice(0, 300)
+      } catch {}
+      console.error(`Contact email was refused by Resend (status ${response.status})${reason ? `: ${reason}` : ''}`)
+    }
   } catch {
     console.error('Contact email could not reach the mail service')
   }
