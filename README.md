@@ -143,10 +143,10 @@ The site runs as a Cloudflare Worker: static files from `dist/`, plus `src/worke
 
 To switch it on:
 
-1. Create an account at resend.com with the address that should receive the messages (the `CONTACT_TO` value in `wrangler.jsonc`). With the default sender `onboarding@resend.dev`, Resend only delivers to the account's own address.
+1. Create an account at resend.com and verify the `fluidweb.app` domain there (Domains > Add domain; Resend can add the DNS records in Cloudflare automatically). The sender `CONTACT_FROM` must be an address on a verified domain.
 2. In Resend, create an API key (sending access is enough).
 3. In the Cloudflare dashboard: Workers & Pages > fluidweb > Settings > Variables and Secrets > Add > type Secret, name `RESEND_API_KEY`, value the key. Or run `npx wrangler secret put RESEND_API_KEY`.
-4. Later, verify your own domain in Resend and change `CONTACT_FROM` in `wrangler.jsonc` to an address on it.
+4. To send from another address, change `CONTACT_FROM` in `wrangler.jsonc` and push.
 
 Until the secret exists the Worker answers 503 and the forms say the message was not sent. The key and the destination address must never be written into a public file; `wrangler.jsonc` is not published.
 
