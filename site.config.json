@@ -4,5 +4,9 @@
   "locale": "en_US",
   "googleTagManagerId": "",
   "googleAnalyticsId": "G-Y7D2Q3Z90V",
-  "checkoutEndpoint": ""
+  "checkoutEndpoint": "",
+  "experience": {
+    "intro": true,
+    "haptics": true
+  }
 }

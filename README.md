@@ -163,3 +163,10 @@ Events: `begin_checkout` (the checkout dialog opens, with `value`, `currency`, `
 ### Cookie choice
 
 The tag starts in Google Consent Mode v2 with `ad_storage`, `analytics_storage`, `ad_user_data` and `ad_personalization` denied. A small banner offers Accept and Decline; the choice is stored in local storage and "Cookie settings" in the footer reopens it. Accepting grants `analytics_storage` only. Without an analytics id there is no banner and no footer link.
+
+## Touch intro and haptics (experiment)
+
+`js/experience.js`, switched in `site.config.json` under `"experience"` (`"intro"` and `"haptics"`, each `true` or `false`; rebuild after changing). Phones and tablets only.
+
+- **Intro:** on the first visit, stars rush past and the page lands (about 1.3 seconds, then the logo waits for a tap until 2.8 seconds). Tapping plays a short chime synthesized in the browser. Browsers block sound until the visitor taps, so the chime cannot play on load. Skipped for reduced-motion settings, crawlers and speed tests. Stored under `fluidweb.intro.v1` in local storage, so it shows once per device.
+- **Haptics:** a short tick when a scroll starts on Android (Vibration API, after the visitor's first tap). iPhones have no official web haptics; on iOS 18 and later a toggled switch control plays a haptic during a touch, used here as a best effort when a swipe ends. iPads have no haptic hardware for this. On iPhone the chime is silent when the ring/silent switch is on silent.

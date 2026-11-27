@@ -530,6 +530,20 @@ function headHTML(page) {
       `<script>${consent}if(location.protocol.indexOf('http')===0){gtag('js',new Date());gtag('config','${gaId}');var g=document.createElement('script');g.async=true;g.src='https://www.googletagmanager.com/gtag/js?id=${gaId}';document.head.appendChild(g)}</script>`,
     )
   }
+  // Touch-device extras (js/experience.js): the first-visit warp intro and scroll haptics, switched in
+  // site.config.json "experience". The inline part runs before first paint so the intro can cover the
+  // page without a flash; it only adds the "intro" class on a first visit from a phone or tablet, with
+  // motion allowed, and never for crawlers or speed tests, so they see the page as it is.
+  const experience = config.experience || {}
+  if (experience.intro || experience.haptics) {
+    const decide = experience.intro
+      ? `(function(){try{var m=window.matchMedia;if(m('(hover: none) and (pointer: coarse)').matches&&!m('(prefers-reduced-motion: reduce)').matches&&!/bot|crawl|spider|slurp|lighthouse|headless|pagespeed|facebookexternalhit|whatsapp|slack|telegram/i.test(navigator.userAgent)&&!localStorage.getItem('fluidweb.intro.v1'))document.documentElement.classList.add('intro')}catch(e){}})();`
+      : ''
+    lines.push(
+      `<script>window.FW_EXPERIENCE={intro:${Boolean(experience.intro)},haptics:${Boolean(experience.haptics)}};${decide}</script>`,
+      `<script src="js/experience.js" defer></script>`,
+    )
+  }
   // Where the checkout form posts the order. Empty until a payment service is connected (see README.md).
   if (page.builder) lines.push(`<meta name="checkout-endpoint" content="${esc(String(config.checkoutEndpoint || '').trim())}">`)
   return lines.join('\n')
