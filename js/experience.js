@@ -1,13 +1,16 @@
 // Touch-device extras for phones and tablets (never on a desktop with a mouse):
-//   1. A first-visit "warp" intro: stars rush past and the page lands. Tapping during it plays a
-//      short chime. Browsers only allow sound after a tap, so the intro invites one.
-//   2. A light haptic tick each time the visitor scrolls. Android phones support this through the
-//      Vibration API. iPhones have no official web API for haptics; on iOS 18 and later Safari plays a
-//      haptic when a switch control is toggled during a touch, which is used here as a best effort.
+//   1. A "warp" intro on every page load: stars rush past and the page lands. The first page of a
+//      visit gets the full version, which waits briefly for a tap; later pages get a quick warp.
+//   2. A short chime with the landing. Browsers only allow sound after the visitor has interacted
+//      with the page, so the chime plays straight away where the browser allows it and otherwise on
+//      the first tap during the intro.
+//   3. Haptics: a light tick on scroll and on taps of links and buttons. Android phones support this
+//      through the Vibration API. iPhones have no official web API for haptics; on iOS 18 and later
+//      Safari plays a haptic when a switch control is toggled during a touch, which is used here.
 //      iPads have no haptic hardware for this.
-// Both are switched on and off in site.config.json ("experience"), which the generator turns into
+// Switched on and off in site.config.json ("experience"), which the generator turns into
 // window.FW_EXPERIENCE in the head of every page, next to the snippet that decides whether the intro
-// runs (first visit, touch device, motion allowed, not a crawler) and adds the "intro" class.
+// runs (touch device, motion allowed, not a crawler) and adds the "intro" class before first paint.
 ;(function () {
   const options = window.FW_EXPERIENCE || {}
   const touch = window.matchMedia('(hover: none) and (pointer: coarse)').matches
@@ -18,7 +21,9 @@
 
   // ---- Haptics ----
 
-  function haptic(pattern) {
+  let makingHaptic = false
+
+  function haptic(pattern = 8) {
     if (typeof navigator.vibrate === 'function') {
       // Chrome ignores (and warns about) vibration before the visitor has tapped the page.
       if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return
@@ -28,6 +33,8 @@
       return
     }
     // iPhone, iOS 18 and later: toggling a switch control during a touch plays a light haptic.
+    // It only works inside a touch or click handler, which is where this is called from.
+    makingHaptic = true
     try {
       const label = document.createElement('label')
       label.setAttribute('aria-hidden', 'true')
@@ -41,11 +48,23 @@
       label.click()
       label.remove()
     } catch {}
+    makingHaptic = false
   }
 
   let introRunning = false
 
   if (options.haptics) {
+    // Taps on anything that does something: links, buttons, form controls, FAQ questions.
+    const TAPPABLE = 'a[href], button, [role="button"], summary, select, input[type="checkbox"], input[type="radio"], input[type="range"], label'
+    document.addEventListener(
+      'click',
+      (event) => {
+        if (!event.isTrusted || makingHaptic || introRunning) return
+        if (event.target.closest && event.target.closest(TAPPABLE)) haptic(8)
+      },
+      true,
+    )
+
     if (typeof navigator.vibrate === 'function') {
       // One tick when a scroll starts; the rest of the same swipe (and its momentum) stays quiet.
       let last = -Infinity
@@ -59,7 +78,7 @@
         { passive: true },
       )
     } else {
-      // iPhone: Safari only allows the switch trick inside a touch event, so tick when a swipe ends.
+      // iPhone: the switch trick needs a touch event, so tick when a swipe ends.
       let startY = null
       let last = -Infinity
       window.addEventListener('touchstart', (event) => (startY = event.touches[0]?.clientY ?? null), { passive: true })
@@ -81,16 +100,19 @@
 
   // ---- Chime (synthesized, no audio file) ----
 
-  function chime() {
+  function newAudio() {
     const AudioContext = window.AudioContext || window.webkitAudioContext
-    if (!AudioContext) return
-    let ctx
+    if (!AudioContext) return null
     try {
-      ctx = new AudioContext()
-      if (ctx.resume) ctx.resume()
+      return new AudioContext()
     } catch {
-      return
+      return null
     }
+  }
+
+  function chime(ctx) {
+    if (!ctx) return
+    if (ctx.state !== 'running' && ctx.resume) ctx.resume()
     const t0 = ctx.currentTime + 0.02
 
     const master = ctx.createGain()
@@ -160,19 +182,29 @@
 
   // ---- Warp intro ----
 
-  const WARP_MS = 1300 // stars accelerate
-  const HOLD_UNTIL_MS = 2800 // the mark waits for a tap until then, then the page lands anyway
+  const FULL = { warp: 1300, holdUntil: 2800 } // first page of a visit: waits for a tap until 2.8 s
+  const QUICK = { warp: 800, holdUntil: 900 } // every later page: a quick warp that lands by itself
   const LAND_MS = 650
+  const SESSION_KEY = 'fluidweb.intro.session'
 
   function runIntro() {
+    let firstOfVisit = true
     try {
-      localStorage.setItem('fluidweb.intro.v1', '1')
+      firstOfVisit = !sessionStorage.getItem(SESSION_KEY)
+      sessionStorage.setItem(SESSION_KEY, '1')
     } catch {}
     if (document.hidden) {
       root.classList.remove('intro')
       return
     }
+    const timing = firstOfVisit ? FULL : QUICK
     introRunning = true
+
+    // Sound now if the browser allows it (some do once the visitor has interacted with this site);
+    // otherwise the context stays suspended and a tap starts it.
+    const audio = newAudio()
+    let soundPlayed = false
+    const canPlayNow = () => Boolean(audio) && audio.state === 'running'
 
     const overlay = document.createElement('div')
     overlay.className = 'warp'
@@ -217,14 +249,14 @@
     let landing = false
     let frame = 0
 
-    // Speed in depth units per second: a slow drift that ramps hard into warp, then eases off while the mark waits.
+    // Speed in depth units per second: a slow drift that ramps hard into warp, then eases off.
     function speed(t) {
-      if (t < WARP_MS) {
-        const p = t / WARP_MS
+      if (t < timing.warp) {
+        const p = t / timing.warp
         return 0.3 + 3.2 * p * p * p
       }
-      const p = Math.min(1, (t - WARP_MS) / 500)
-      return 3.52 - 3.3 * (1 - Math.pow(1 - p, 3))
+      const p = Math.min(1, (t - timing.warp) / 500)
+      return 3.5 - 3.28 * (1 - Math.pow(1 - p, 3))
     }
 
     function draw(time) {
@@ -232,7 +264,6 @@
       const dt = Math.min(0.05, (time - lastFrame) / 1000)
       lastFrame = time
       const v = speed(t)
-      // Longer trails at high speed.
       ctx.fillStyle = `rgba(0,0,0,${v > 1.5 ? 0.38 : 0.6})`
       ctx.fillRect(0, 0, width, height)
       const cx = width / 2
@@ -262,20 +293,23 @@
         ctx.lineTo(x, y)
         ctx.stroke()
       }
-      if (t > WARP_MS - 250) overlay.classList.add('warp-arrived')
-      if (t > WARP_MS + 150) overlay.classList.add('warp-ask')
-      if (t > HOLD_UNTIL_MS) land(false)
-      if (!landing || t < HOLD_UNTIL_MS + LAND_MS) frame = requestAnimationFrame(draw)
+      if (t > timing.warp - 250) overlay.classList.add('warp-arrived')
+      // When sound is already allowed there is no reason to wait for a tap.
+      if (!landing && t > timing.warp && canPlayNow()) land(false)
+      if (firstOfVisit && t > timing.warp + 150) overlay.classList.add('warp-ask')
+      if (!landing && t > timing.holdUntil) land(false)
+      frame = requestAnimationFrame(draw)
     }
     frame = requestAnimationFrame(draw)
 
     function land(tapped) {
       if (landing) return
       landing = true
-      if (tapped) {
-        chime()
-        haptic([12, 40, 18])
+      if (audio && (tapped || canPlayNow())) {
+        chime(audio)
+        soundPlayed = true
       }
+      if (tapped) haptic([12, 40, 18])
       overlay.classList.add('warp-land')
       root.classList.add('warp-landing')
       setTimeout(() => {
@@ -284,6 +318,7 @@
         overlay.remove()
         root.classList.remove('warp-on', 'warp-landing')
         introRunning = false
+        if (audio && !soundPlayed && audio.close) audio.close()
       }, LAND_MS + 100)
     }
 
