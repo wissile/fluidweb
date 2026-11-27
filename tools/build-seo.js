@@ -532,12 +532,13 @@ function headHTML(page) {
   }
   // Touch-device extras (js/experience.js): the first-visit warp intro and scroll haptics, switched in
   // site.config.json "experience". The inline part runs before first paint so the intro can cover the
-  // page without a flash; it adds the "intro" class on every page load from a phone or tablet with
-  // motion allowed, and never for crawlers or speed tests, so they see the page as it is.
+  // page without a flash; it adds the "intro" class when the site is opened on a phone or tablet
+  // (not when moving between its own pages or going back), with motion allowed, and never for
+  // crawlers or speed tests, so they see the page as it is.
   const experience = config.experience || {}
   if (experience.intro || experience.haptics) {
     const decide = experience.intro
-      ? `(function(){try{var m=window.matchMedia;if(m('(hover: none) and (pointer: coarse)').matches&&!m('(prefers-reduced-motion: reduce)').matches&&!/bot|crawl|spider|slurp|lighthouse|headless|pagespeed|facebookexternalhit|whatsapp|slack|telegram/i.test(navigator.userAgent))document.documentElement.classList.add('intro')}catch(e){}})();`
+      ? `(function(){try{var m=window.matchMedia;if(m('(hover: none) and (pointer: coarse)').matches&&!m('(prefers-reduced-motion: reduce)').matches&&!/bot|crawl|spider|slurp|lighthouse|headless|pagespeed|facebookexternalhit|whatsapp|slack|telegram/i.test(navigator.userAgent)){var n=(performance.getEntriesByType&&performance.getEntriesByType('navigation')[0])||{},r=document.referrer,inside=false;try{inside=!!r&&new URL(r).host===location.host}catch(e){}if(n.type!=='back_forward'&&(n.type==='reload'||!inside))document.documentElement.classList.add('intro')}}catch(e){}})();`
       : ''
     lines.push(
       `<script>window.FW_EXPERIENCE={intro:${Boolean(experience.intro)},haptics:${Boolean(experience.haptics)}};${decide}</script>`,

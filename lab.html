@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex, nofollow">
+<title>Sound and haptics test | Fluidweb</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/styles.css">
+<!-- An unlisted page for checking the chime and haptics on a real phone. Not in the sitemap or the menus. -->
+<script>window.FW_EXPERIENCE={intro:false,haptics:false}</script>
+<script src="js/experience.js" defer></script>
+<style>
+  .lab { display: flex; max-width: 34rem; flex-direction: column; gap: 1.25rem; padding-block: 3rem 5rem; }
+  .lab h1 { font-size: 1.75rem; line-height: 2.25rem; font-weight: 600; letter-spacing: -0.025em; }
+  .lab-card { display: flex; flex-direction: column; gap: 0.75rem; padding: 1.25rem; border: 1px solid var(--border); border-radius: var(--radius-xl); background: var(--card); }
+  .lab-card h2 { font-size: 1rem; font-weight: 600; }
+  .lab-card p, .lab dl { font-size: 0.875rem; line-height: 1.6; color: var(--muted-foreground); }
+  .lab-card .btn { align-self: flex-start; }
+  .lab-result { min-height: 1.4em; font: 500 0.8125rem/1.4 var(--font-mono); color: var(--brand); }
+  .lab dl { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 1rem; }
+  .lab dt { color: var(--foreground); }
+  .lab-switch { display: flex; align-items: center; gap: 0.75rem; font-size: 0.9375rem; }
+  .lab-switch input { width: 3rem; height: 1.75rem; accent-color: var(--brand); }
+</style>
+</head>
+<body>
+<main class="container lab">
+  <a href="index.html" class="muted">Back to Fluidweb</a>
+  <h1>Sound and haptics test</h1>
+  <p class="muted">Try each test on your phone and note which ones work. Turn the volume up first.</p>
+
+  <section class="lab-card">
+    <h2>1. Your device</h2>
+    <dl id="device"></dl>
+  </section>
+
+  <section class="lab-card">
+    <h2>2. Chime</h2>
+    <p>Plays the intro chime. On iPhone, website sound is muted while the ring/silent switch is on silent.</p>
+    <button type="button" class="btn btn-primary btn-lg" id="play">Play the chime</button>
+    <p class="lab-result" id="play-result"></p>
+  </section>
+
+  <section class="lab-card">
+    <h2>3. Chime, even in silent mode</h2>
+    <p>Asks Safari to treat the chime like media playback, which plays through the silent switch. If test 2 is silent and this one is not, the silent switch is the reason.</p>
+    <button type="button" class="btn btn-outline btn-lg" id="play-loud">Play through silent mode</button>
+    <p class="lab-result" id="play-loud-result"></p>
+  </section>
+
+  <section class="lab-card">
+    <h2>4. Real switch</h2>
+    <p>Flip this switch with your finger. If you feel a tick, your phone plays haptics for switches, which the site relies on for iPhone haptics. No tick usually means iOS is older than 18 or System Haptics is off (Settings, Sounds &amp; Haptics).</p>
+    <label class="lab-switch"><input type="checkbox" switch id="real-switch"> Flip me</label>
+  </section>
+
+  <section class="lab-card">
+    <h2>5. The site's haptic</h2>
+    <p>Triggers the same haptic the site uses on taps and scrolls.</p>
+    <button type="button" class="btn btn-outline btn-lg" id="haptic">Tap for a haptic</button>
+    <p class="lab-result" id="haptic-result"></p>
+  </section>
+</main>
+<script>
+  ;(function () {
+    const $ = (id) => document.getElementById(id)
+    const ua = navigator.userAgent
+    const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    const iosVersion = (ua.match(/OS (\d+)[._](\d+)/) || [])[1]
+    const rows = [
+      ['System', ios ? `iOS / iPadOS${iosVersion ? ' ' + iosVersion : ''}` : /Android/.test(ua) ? 'Android' : 'Other'],
+      ['Touch screen', window.matchMedia('(hover: none) and (pointer: coarse)').matches ? 'Yes' : 'No'],
+      ['Vibration API', typeof navigator.vibrate === 'function' ? 'Yes' : 'No (normal on iPhone)'],
+      ['Web Audio', window.AudioContext || window.webkitAudioContext ? 'Yes' : 'No'],
+      ['Audio session control', 'audioSession' in navigator ? 'Yes' : 'No'],
+    ]
+    $('device').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')
+
+    let ctx = null
+    function play(resultId, loud) {
+      const lab = window.FWExperience
+      if (!lab) return ($(resultId).textContent = 'The test script did not load.')
+      try {
+        if ('audioSession' in navigator) navigator.audioSession.type = loud ? 'playback' : 'auto'
+      } catch {}
+      ctx = lab.unlockAudio(ctx)
+      if (!ctx) return ($(resultId).textContent = 'This browser cannot play Web Audio.')
+      lab.chime(ctx)
+      ctx = null // chime() closes its context when done
+      setTimeout(() => ($(resultId).textContent = 'Played. Did you hear it?'), 200)
+    }
+    $('play').addEventListener('click', () => play('play-result', false))
+    $('play-loud').addEventListener('click', () => play('play-loud-result', true))
+    $('haptic').addEventListener('click', () => {
+      if (!window.FWExperience) return ($('haptic-result').textContent = 'The test script did not load.')
+      window.FWExperience.haptic(20)
+      $('haptic-result').textContent = 'Sent. Did you feel it?'
+    })
+  })()
+</script>
+</body>
+</html>

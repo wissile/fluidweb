@@ -1,21 +1,19 @@
 // Touch-device extras for phones and tablets (never on a desktop with a mouse):
-//   1. A "warp" intro on every page load: stars rush past and the page lands. The first page of a
-//      visit gets the full version, which waits briefly for a tap; later pages get a quick warp.
-//   2. A short chime with the landing. Browsers only allow sound after the visitor has interacted
-//      with the page, so the chime plays straight away where the browser allows it and otherwise on
-//      the first tap during the intro.
+//   1. A "warp" intro when the site is opened (arriving from another site, a link, a bookmark or a
+//      reload), not when moving between its pages: stars rush past, the logo waits briefly for a tap,
+//      and the page lands.
+//   2. A short chime with the landing. Phone browsers only allow sound after the visitor taps, so it
+//      plays on the tap during the intro (or straight away where the browser already allows sound).
+//      On iPhone, sound from websites is muted while the ring/silent switch is on silent.
 //   3. Haptics: a light tick on scroll and on taps of links and buttons. Android phones support this
 //      through the Vibration API. iPhones have no official web API for haptics; on iOS 18 and later
-//      Safari plays a haptic when a switch control is toggled during a touch, which is used here.
+//      Safari plays a haptic when a switch control is toggled during a tap, which is used here.
 //      iPads have no haptic hardware for this.
 // Switched on and off in site.config.json ("experience"), which the generator turns into
 // window.FW_EXPERIENCE in the head of every page, next to the snippet that decides whether the intro
-// runs (touch device, motion allowed, not a crawler) and adds the "intro" class before first paint.
+// runs and adds the "intro" class before first paint. lab.html tests sound and haptics on a device.
 ;(function () {
   const options = window.FW_EXPERIENCE || {}
-  const touch = window.matchMedia('(hover: none) and (pointer: coarse)').matches
-  if (!touch) return
-
   const root = document.documentElement
   const now = () => performance.now()
 
@@ -51,53 +49,6 @@
     makingHaptic = false
   }
 
-  let introRunning = false
-
-  if (options.haptics) {
-    // Taps on anything that does something: links, buttons, form controls, FAQ questions.
-    const TAPPABLE = 'a[href], button, [role="button"], summary, select, input[type="checkbox"], input[type="radio"], input[type="range"], label'
-    document.addEventListener(
-      'click',
-      (event) => {
-        if (!event.isTrusted || makingHaptic || introRunning) return
-        if (event.target.closest && event.target.closest(TAPPABLE)) haptic(8)
-      },
-      true,
-    )
-
-    if (typeof navigator.vibrate === 'function') {
-      // One tick when a scroll starts; the rest of the same swipe (and its momentum) stays quiet.
-      let last = -Infinity
-      window.addEventListener(
-        'scroll',
-        () => {
-          const t = now()
-          if (t - last > 240 && !introRunning) haptic(7)
-          last = t
-        },
-        { passive: true },
-      )
-    } else {
-      // iPhone: the switch trick needs a touch event, so tick when a swipe ends.
-      let startY = null
-      let last = -Infinity
-      window.addEventListener('touchstart', (event) => (startY = event.touches[0]?.clientY ?? null), { passive: true })
-      window.addEventListener(
-        'touchend',
-        (event) => {
-          if (startY === null || introRunning) return
-          const moved = Math.abs((event.changedTouches[0]?.clientY ?? startY) - startY)
-          startY = null
-          if (moved > 14 && now() - last > 150) {
-            last = now()
-            haptic()
-          }
-        },
-        { passive: true },
-      )
-    }
-  }
-
   // ---- Chime (synthesized, no audio file) ----
 
   function newAudio() {
@@ -108,6 +59,22 @@
     } catch {
       return null
     }
+  }
+
+  // iPhone only starts sound inside a tap (touchend or click, not touchstart). Call this from such a
+  // handler: it resumes the context, or replaces it with one created inside the tap, and plays a
+  // silent sample, which is what unlocks Web Audio on older iOS versions.
+  function unlockAudio(ctx) {
+    if (!ctx || ctx.state === 'closed') ctx = newAudio()
+    if (!ctx) return null
+    try {
+      if (ctx.resume) ctx.resume()
+      const source = ctx.createBufferSource()
+      source.buffer = ctx.createBuffer(1, 1, 22050)
+      source.connect(ctx.destination)
+      source.start(0)
+    } catch {}
+    return ctx
   }
 
   function chime(ctx) {
@@ -180,29 +147,73 @@
     setTimeout(() => ctx.close && ctx.close(), 2800)
   }
 
+  window.FWExperience = { haptic, chime, newAudio, unlockAudio }
+
+  const touch = window.matchMedia('(hover: none) and (pointer: coarse)').matches
+  if (!touch) return
+
+  let introRunning = false
+
+  if (options.haptics) {
+    // Taps on anything that does something: links, buttons, form controls, FAQ questions.
+    const TAPPABLE = 'a[href], button, [role="button"], summary, select, input[type="checkbox"], input[type="radio"], input[type="range"], label'
+    document.addEventListener(
+      'click',
+      (event) => {
+        if (!event.isTrusted || makingHaptic || introRunning) return
+        if (event.target.closest && event.target.closest(TAPPABLE)) haptic(8)
+      },
+      true,
+    )
+
+    if (typeof navigator.vibrate === 'function') {
+      // One tick when a scroll starts; the rest of the same swipe (and its momentum) stays quiet.
+      let last = -Infinity
+      window.addEventListener(
+        'scroll',
+        () => {
+          const t = now()
+          if (t - last > 240 && !introRunning) haptic(7)
+          last = t
+        },
+        { passive: true },
+      )
+    } else {
+      // iPhone: the switch trick needs a touch event, so tick when a swipe ends.
+      let startY = null
+      let last = -Infinity
+      window.addEventListener('touchstart', (event) => (startY = event.touches[0]?.clientY ?? null), { passive: true })
+      window.addEventListener(
+        'touchend',
+        (event) => {
+          if (startY === null || introRunning) return
+          const moved = Math.abs((event.changedTouches[0]?.clientY ?? startY) - startY)
+          startY = null
+          if (moved > 14 && now() - last > 150) {
+            last = now()
+            haptic()
+          }
+        },
+        { passive: true },
+      )
+    }
+  }
+
   // ---- Warp intro ----
 
-  const FULL = { warp: 1300, holdUntil: 2800 } // first page of a visit: waits for a tap until 2.8 s
-  const QUICK = { warp: 800, holdUntil: 900 } // every later page: a quick warp that lands by itself
+  const timing = { warp: 1300, holdUntil: 2800 } // the logo waits for a tap until 2.8 s, then the page lands anyway
   const LAND_MS = 650
-  const SESSION_KEY = 'fluidweb.intro.session'
 
   function runIntro() {
-    let firstOfVisit = true
-    try {
-      firstOfVisit = !sessionStorage.getItem(SESSION_KEY)
-      sessionStorage.setItem(SESSION_KEY, '1')
-    } catch {}
     if (document.hidden) {
       root.classList.remove('intro')
       return
     }
-    const timing = firstOfVisit ? FULL : QUICK
     introRunning = true
 
     // Sound now if the browser allows it (some do once the visitor has interacted with this site);
     // otherwise the context stays suspended and a tap starts it.
-    const audio = newAudio()
+    let audio = newAudio()
     let soundPlayed = false
     const canPlayNow = () => Boolean(audio) && audio.state === 'running'
 
@@ -296,7 +307,7 @@
       if (t > timing.warp - 250) overlay.classList.add('warp-arrived')
       // When sound is already allowed there is no reason to wait for a tap.
       if (!landing && t > timing.warp && canPlayNow()) land(false)
-      if (firstOfVisit && t > timing.warp + 150) overlay.classList.add('warp-ask')
+      if (t > timing.warp + 150) overlay.classList.add('warp-ask')
       if (!landing && t > timing.holdUntil) land(false)
       frame = requestAnimationFrame(draw)
     }
@@ -305,6 +316,7 @@
     function land(tapped) {
       if (landing) return
       landing = true
+      if (tapped) audio = unlockAudio(audio)
       if (audio && (tapped || canPlayNow())) {
         chime(audio)
         soundPlayed = true
@@ -322,10 +334,8 @@
       }, LAND_MS + 100)
     }
 
-    overlay.addEventListener('pointerdown', (event) => {
-      event.preventDefault()
-      land(true)
-    })
+    // A click (after the finger lifts) counts as a tap for sound and haptics on iPhone; a touchstart does not.
+    overlay.addEventListener('click', () => land(true))
   }
 
   if (options.intro && root.classList.contains('intro')) runIntro()
