@@ -9,7 +9,7 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/styles.css">
 <!-- An unlisted page for checking the chime and haptics on a real phone. Not in the sitemap or the menus. -->
-<script>window.FW_EXPERIENCE={intro:false,haptics:false}</script>
+<script>window.FW_EXPERIENCE={intro:false,haptics:true}</script>
 <script src="js/experience.js" defer></script>
 <style>
   .lab { display: flex; max-width: 34rem; flex-direction: column; gap: 1.25rem; padding-block: 3rem 5rem; }
@@ -58,7 +58,7 @@
 
   <section class="lab-card">
     <h2>5. The site's haptic</h2>
-    <p>Triggers the same haptic the site uses on taps and scrolls.</p>
+    <p>Tap this button. It uses the same method as every link and button on the site: an invisible switch under your finger. You should feel the same tick as test 4.</p>
     <button type="button" class="btn btn-outline btn-lg" id="haptic">Tap for a haptic</button>
     <p class="lab-result" id="haptic-result"></p>
   </section>
@@ -96,7 +96,7 @@
     $('haptic').addEventListener('click', () => {
       if (!window.FWExperience) return ($('haptic-result').textContent = 'The test script did not load.')
       window.FWExperience.haptic(20)
-      $('haptic-result').textContent = 'Sent. Did you feel it?'
+      $('haptic-result').textContent = 'Tapped. Did you feel it?'
     })
   })()
 </script>

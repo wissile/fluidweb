@@ -170,7 +170,9 @@ The tag starts in Google Consent Mode v2 with `ad_storage`, `analytics_storage`,
 
 - **Intro:** when the site is opened (from another site, a typed address, a bookmark or a reload), stars rush past for about 1.3 seconds, then the logo waits for a tap until 2.8 seconds and the page lands. Moving between the site's own pages or going back does not replay it. Skipped for reduced-motion settings, crawlers and speed tests.
 - **Chime:** synthesized in the browser, no audio file. Phone browsers block sound until the visitor taps, so it plays on the tap during the intro (or straight away where a browser already allows sound). On iPhone, website sound is muted while the ring/silent switch is on silent.
-- **Haptics:** a short tick on taps of links, buttons and form controls, and on scroll. Android uses the Vibration API (after the visitor's first tap). iPhones have no official web haptics; on iOS 18 and later a toggled switch control plays a haptic during a tap, which is used for taps and when a swipe ends. It needs System Haptics on (Settings, Sounds & Haptics). iPads have no haptic hardware for this.
+- **Haptics, iPhone:** websites have no haptics API, but Safari 18 and later plays the iPhone's own haptic when a finger flips a real switch control. Every link, button, FAQ question, builder block and payment choice gets a transparent switch (`.tap-switch`) on top; the finger flips it, and the tap is passed on to the element as a normal click. Keyboard and VoiceOver users act on the elements directly. Scrolling flips nothing, so there are no scroll haptics on iPhone. Needs System Haptics on (Settings, Sounds & Haptics).
+- **Haptics, Android:** the Vibration API (after the visitor's first tap): a tick on taps, and while scrolling a roulette-style tick every 56 px of travel (at most one every 28 ms), so the ticks speed up and slow down with the scroll.
+- iPads have no haptic hardware for this.
 - **Testing on a device:** `/lab` (lab.html, unlisted and `noindex`) has buttons for the chime, the chime through silent mode, a real switch and the site's haptic.
 
 ## Play layer (sound, motion and rewards)

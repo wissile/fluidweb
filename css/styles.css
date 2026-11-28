@@ -880,3 +880,7 @@ html.warp-landing main, html.warp-landing .site-header { animation: warp-arrive 
   .block { transform: none; }
   .fx-canvas, .fx-fly, .hero-field { display: none; }
 }
+
+/* iPhone haptics (js/experience.js): an invisible real switch over each tappable element. */
+.tap-switch { position: absolute; inset: 0; z-index: 4; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; border-radius: inherit; opacity: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.warp > .tap-switch { position: absolute; z-index: 2; }

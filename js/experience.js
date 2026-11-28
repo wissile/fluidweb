@@ -5,10 +5,11 @@
 //   2. A short chime with the landing. Phone browsers only allow sound after the visitor taps, so it
 //      plays on the tap during the intro (or straight away where the browser already allows sound).
 //      On iPhone, sound from websites is muted while the ring/silent switch is on silent.
-//   3. Haptics: a light tick on scroll and on taps of links and buttons. Android phones support this
-//      through the Vibration API. iPhones have no official web API for haptics; on iOS 18 and later
-//      Safari plays a haptic when a switch control is toggled during a tap, which is used here.
-//      iPads have no haptic hardware for this.
+//   3. Haptics. iPhone: websites have no haptics API, but Safari 18+ plays the iPhone's haptic when a
+//      finger flips a real switch control, so every link, button and block gets an invisible switch on
+//      top that the finger flips, and the tap is passed on. Scrolling flips nothing, so iPhones cannot
+//      have scroll haptics from a website. Android: the Vibration API gives taps a tick and scrolling a
+//      roulette-style run of ticks that slows down with the scroll. iPads have no haptic hardware.
 // Switched on and off in site.config.json ("experience"), which the generator turns into
 // window.FW_EXPERIENCE in the head of every page, next to the snippet that decides whether the intro
 // runs and adds the "intro" class before first paint. lab.html tests sound and haptics on a device.
@@ -19,34 +20,15 @@
 
   // ---- Haptics ----
 
-  let makingHaptic = false
-
+  // Android: the Vibration API. iPhone: no API at all; Safari only plays its haptic when a finger
+  // flips a real switch control, so on iPhone haptics come from the invisible switches added below.
   function haptic(pattern = 8) {
-    if (typeof navigator.vibrate === 'function') {
-      // Chrome ignores (and warns about) vibration before the visitor has tapped the page.
-      if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return
-      try {
-        navigator.vibrate(pattern)
-      } catch {}
-      return
-    }
-    // iPhone, iOS 18 and later: toggling a switch control during a touch plays a light haptic.
-    // It only works inside a touch or click handler, which is where this is called from.
-    makingHaptic = true
+    if (typeof navigator.vibrate !== 'function') return
+    // Chrome ignores (and warns about) vibration before the visitor has tapped the page.
+    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return
     try {
-      const label = document.createElement('label')
-      label.setAttribute('aria-hidden', 'true')
-      label.style.display = 'none'
-      const input = document.createElement('input')
-      input.type = 'checkbox'
-      input.setAttribute('switch', '')
-      input.tabIndex = -1
-      label.appendChild(input)
-      document.head.appendChild(label)
-      label.click()
-      label.remove()
+      navigator.vibrate(pattern)
     } catch {}
-    makingHaptic = false
   }
 
   // ---- Chime (synthesized, no audio file) ----
@@ -154,49 +136,88 @@
 
   let introRunning = false
 
-  if (options.haptics) {
-    // Taps on anything that does something: links, buttons, form controls, FAQ questions.
-    const TAPPABLE = 'a[href], button, [role="button"], summary, select, input[type="checkbox"], input[type="radio"], input[type="range"], label'
+  // Things a finger can tap: links, buttons, FAQ questions, builder blocks, payment choices.
+  const TAPPABLE = 'a[href], button, [role="button"], summary, label.block, label.plan'
+
+  // iPhone (Safari 18 and later supports switch controls): every tappable element gets a transparent
+  // real switch on top of it. The finger flips the switch, which plays the iPhone's own haptic, and
+  // the tap is then passed on to the element underneath as a normal click. Keyboard and VoiceOver
+  // users act on the elements directly, so the switches are hidden from them.
+  const switchHaptics =
+    options.haptics && typeof navigator.vibrate !== 'function' && ('switch' in HTMLInputElement.prototype || window.FW_FORCE_SWITCH === true)
+
+  function arm(element) {
+    if (element.fwSwitch || element.closest('.warp')) return
+    element.fwSwitch = true
+    if (window.getComputedStyle(element).position === 'static') element.style.position = 'relative'
+    const flip = document.createElement('input')
+    flip.type = 'checkbox'
+    flip.setAttribute('switch', '')
+    flip.className = 'tap-switch'
+    flip.tabIndex = -1
+    flip.setAttribute('aria-hidden', 'true')
+    flip.addEventListener('click', (event) => {
+      // The switch flips (that is the haptic); the element gets one ordinary click instead of this one.
+      event.stopPropagation()
+      if (introRunning || element.disabled) return
+      element.click()
+    })
+    element.appendChild(flip)
+  }
+
+  function armAll(root) {
+    if (root.matches && root.matches(TAPPABLE)) arm(root)
+    if (root.querySelectorAll) for (const element of root.querySelectorAll(TAPPABLE)) arm(element)
+  }
+
+  if (switchHaptics) {
+    armAll(document.body)
+    let pending = []
+    let scheduled = false
+    new MutationObserver((records) => {
+      for (const record of records) for (const node of record.addedNodes) if (node.nodeType === 1 && !node.classList.contains('tap-switch')) pending.push(node)
+      if (scheduled || !pending.length) return
+      scheduled = true
+      requestAnimationFrame(() => {
+        const nodes = pending
+        pending = []
+        scheduled = false
+        for (const node of nodes) if (node.isConnected) armAll(node)
+      })
+    }).observe(document.body, { childList: true, subtree: true })
+  }
+
+  if (options.haptics && typeof navigator.vibrate === 'function') {
+    // Android: a tick on taps, and a roulette-style run of ticks while scrolling: one tick every
+    // DETENT pixels of travel, so a fast fling clicks quickly and the clicks space out as it slows.
     document.addEventListener(
       'click',
       (event) => {
-        if (!event.isTrusted || makingHaptic || introRunning) return
+        if (!event.isTrusted || introRunning) return
         if (event.target.closest && event.target.closest(TAPPABLE)) haptic(8)
       },
       true,
     )
-
-    if (typeof navigator.vibrate === 'function') {
-      // One tick when a scroll starts; the rest of the same swipe (and its momentum) stays quiet.
-      let last = -Infinity
-      window.addEventListener(
-        'scroll',
-        () => {
-          const t = now()
-          if (t - last > 240 && !introRunning) haptic(7)
-          last = t
-        },
-        { passive: true },
-      )
-    } else {
-      // iPhone: the switch trick needs a touch event, so tick when a swipe ends.
-      let startY = null
-      let last = -Infinity
-      window.addEventListener('touchstart', (event) => (startY = event.touches[0]?.clientY ?? null), { passive: true })
-      window.addEventListener(
-        'touchend',
-        (event) => {
-          if (startY === null || introRunning) return
-          const moved = Math.abs((event.changedTouches[0]?.clientY ?? startY) - startY)
-          startY = null
-          if (moved > 14 && now() - last > 150) {
-            last = now()
-            haptic()
-          }
-        },
-        { passive: true },
-      )
-    }
+    const DETENT = 56
+    const MIN_GAP_MS = 28
+    let lastY = window.scrollY
+    let travelled = 0
+    let lastTick = 0
+    window.addEventListener(
+      'scroll',
+      () => {
+        const y = window.scrollY
+        travelled += Math.abs(y - lastY)
+        lastY = y
+        const t = now()
+        if (travelled >= DETENT && t - lastTick >= MIN_GAP_MS && !introRunning) {
+          haptic(4)
+          lastTick = t
+          travelled %= DETENT
+        }
+      },
+      { passive: true },
+    )
   }
 
   // ---- Warp intro ----
@@ -221,7 +242,7 @@
     overlay.className = 'warp'
     overlay.setAttribute('aria-hidden', 'true')
     overlay.innerHTML =
-      '<canvas></canvas><div class="warp-mark"><span></span><span></span><span></span><span></span></div><p class="warp-hint">Tap to enter</p>'
+      '<canvas></canvas><div class="warp-mark"><span></span><span></span><span></span><span></span></div><p class="warp-hint">Tap to enter</p><input type="checkbox" switch class="tap-switch" tabindex="-1" aria-hidden="true">'
     document.body.appendChild(overlay)
     root.classList.add('warp-on')
     root.classList.remove('intro')
