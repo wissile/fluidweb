@@ -172,3 +172,13 @@ The tag starts in Google Consent Mode v2 with `ad_storage`, `analytics_storage`,
 - **Chime:** synthesized in the browser, no audio file. Phone browsers block sound until the visitor taps, so it plays on the tap during the intro (or straight away where a browser already allows sound). On iPhone, website sound is muted while the ring/silent switch is on silent.
 - **Haptics:** a short tick on taps of links, buttons and form controls, and on scroll. Android uses the Vibration API (after the visitor's first tap). iPhones have no official web haptics; on iOS 18 and later a toggled switch control plays a haptic during a tap, which is used for taps and when a swipe ends. It needs System Haptics on (Settings, Sounds & Haptics). iPads have no haptic hardware for this.
 - **Testing on a device:** `/lab` (lab.html, unlisted and `noindex`) has buttons for the chime, the chime through silent mode, a real switch and the site's haptic.
+
+## Play layer (sound, motion and rewards)
+
+`js/play.js`, switched in `site.config.json` with `"experience": { "play": true }` (rebuild after changing). It listens for the `fw:build` event that `js/app.js` sends after every change to a build, so the builder works the same without it.
+
+- **Notes:** every block has a note, picked by its category from a pentatonic scale (website blocks around G3, app blocks around D4), so any build sounds in tune. Adding a block plucks its note with a snap, panned to where it sits on screen; removing one plays a falling note; steppers and the page slider tick; templates play their blocks as a quick run; checkout plays a chord. "Play" in the summary plays the whole build as a melody while each brick lights up.
+- **Motion:** a burst of particles in the block's category color, the price change floating up (green for more, grey for less), a brick that flies into the stack (or into the total on phones), the total bumping, block cards that tilt toward a mouse cursor, and floating blocks in the home page hero that drift away from a finger or cursor (a tap in empty hero space plays a note).
+- **Combos:** six combinations earn a toast and a chord once per visit (SEO + AEO, accounts + payments, languages + accessibility, security + backups + monitoring, custom design + brand kit, website + app).
+- **Sound switch:** the speaker button in the header, remembered in local storage (`fluidweb.sound.v1`). Sound only follows a tap, click or key press; nothing plays on its own.
+- Reduced-motion settings turn the motion off; sound stays available through the switch.

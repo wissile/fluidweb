@@ -50,6 +50,7 @@
   }
 
   function dispatch(action) {
+    const before = quote
     config = reducer(config, action)
     quote = P.computeQuote(config)
     saveBuild()
@@ -60,7 +61,11 @@
       } catch {}
     }
     render()
+    // js/play.js listens for this to add sound and motion; nothing here depends on it.
+    document.dispatchEvent(new CustomEvent('fw:build', { detail: { action, before, after: quote, config } }))
   }
+
+  window.FWBuilder = { quote: () => quote }
 
   // ---- The build is kept in this browser, and can be written into a link ----
   // Both use the short code from js/share.js. Anything read back goes through the strict parser,
@@ -405,7 +410,10 @@
   const TALK_FIRST_TEMPLATE = 'enterprise'
 
   function summaryHTML(weeks, isNew) {
-    const head = `<div class="summary-head"><h3>Your build</h3><span>${quote.blocks} ${quote.blocks === 1 ? 'block' : 'blocks'}</span></div>`
+    const play = quote.products.length
+      ? `<button type="button" class="btn btn-ghost play-build" data-action="play-build" title="Play your build as a melody">${icon('music')}<span>Play</span></button>`
+      : ''
+    const head = `<div class="summary-head"><h3>Your build</h3><span class="summary-count">${play}<span>${quote.blocks} ${quote.blocks === 1 ? 'block' : 'blocks'}</span></span></div>`
     if (quote.products.length === 0) {
       return `${head}<p class="summary-empty">Nothing here yet. Add a website or a mobile app and watch your stack grow.</p>`
     }

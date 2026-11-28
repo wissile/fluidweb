@@ -545,6 +545,8 @@ function headHTML(page) {
       `<script src="js/experience.js" defer></script>`,
     )
   }
+  // Sound, motion and rewards around the builder and the hero (js/play.js).
+  if (experience.play) lines.push(`<script src="js/play.js" defer></script>`)
   // Where the checkout form posts the order. Empty until a payment service is connected (see README.md).
   if (page.builder) lines.push(`<meta name="checkout-endpoint" content="${esc(String(config.checkoutEndpoint || '').trim())}">`)
   return lines.join('\n')
@@ -563,6 +565,7 @@ function headerHTML(page) {
 ${links}
     </nav>
     <a href="${builderHref(page)}" class="btn btn-primary btn-lg">Start building</a>
+    <button type="button" class="btn btn-ghost btn-icon-sm sound-toggle" data-sound-toggle aria-pressed="true" aria-label="Sound effects" hidden>${icon('volume-2')}${icon('volume-x')}</button>
     <button type="button" class="btn btn-outline nav-toggle" aria-expanded="false" aria-controls="site-nav" aria-label="Menu" hidden>${icon('menu')}</button>`
 }
 
